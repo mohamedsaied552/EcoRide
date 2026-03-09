@@ -1,0 +1,1 @@
+typedef OnScan = void Function(String? code);
