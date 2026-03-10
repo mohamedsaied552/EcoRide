@@ -21,6 +21,7 @@ class FirebaseService {
       ridesCount: 12,
       rating: 4.9,
     );
+    _isLoggedIn = false;
 
     _scooters = const [
       Scooter(
@@ -95,6 +96,38 @@ class FirebaseService {
   late AppUser _currentUser;
   late List<Scooter> _scooters;
   late List<Ride> _rides;
+  bool _isLoggedIn = false;
+
+  /// Returns whether a user is currently logged in.
+  bool get isLoggedIn => _isLoggedIn;
+
+  /// Mock login - accepts any email/password with proper format.
+  Future<bool> login(String email, String password) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (email.isNotEmpty && password.length >= 6) {
+      _currentUser = _currentUser.copyWith(email: email);
+      _isLoggedIn = true;
+      return true;
+    }
+    return false;
+  }
+
+  /// Mock signup - creates a new user.
+  Future<bool> signup(String name, String email, String password) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (name.isNotEmpty && email.isNotEmpty && password.length >= 6) {
+      _currentUser = _currentUser.copyWith(name: name, email: email);
+      _isLoggedIn = true;
+      return true;
+    }
+    return false;
+  }
+
+  /// Mock logout.
+  Future<void> logout() async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    _isLoggedIn = false;
+  }
 
   /// Returns the current user profile including latest wallet balance.
   Future<AppUser> fetchCurrentUser() async {
