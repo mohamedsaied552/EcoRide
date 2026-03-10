@@ -96,10 +96,6 @@ class FirebaseService {
   late List<Scooter> _scooters;
   late List<Ride> _rides;
 
-  // Simple pricing and safety configuration for the demo.
-  static const double _pricePerMinute = 1.25; // EGP/min
-  static const double _minimumWalletToStart = 50.0; // EGP
-
   /// Returns the current user profile including latest wallet balance.
   Future<AppUser> fetchCurrentUser() async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -129,7 +125,7 @@ class FirebaseService {
   }
 
   /// Charges the user's wallet for a finished ride.
-  Future<AppUser> _chargeForRide(double amount) async {
+  Future<AppUser> chargeForRide(double amount) async {
     await Future<void>.delayed(const Duration(milliseconds: 150));
     final newBalance = (_currentUser.walletBalance - amount).clamp(
       0.0,
@@ -139,56 +135,50 @@ class FirebaseService {
     return _currentUser;
   }
 
-  /// Starts and immediately completes a short demo ride for a scooter code.
-  ///
-  /// This simulates:
-  /// - wallet balance check
-  /// - ride duration & distance
-  /// - cost calculation
-  /// - wallet deduction
-  /// - ride history entry
-  ///
-  /// It is triggered from the QR scan flow to keep the sample app simple.
-  Future<Ride> startAndCompleteDemoRide(String scooterCode) async {
-    // 1) Look up the scooter by its QR / code.
-    final scooter = _scooters.firstWhere(
-      (s) => s.code == scooterCode,
-      orElse: () =>
-          throw StateError('Scooter with code $scooterCode not found'),
-    );
-
-    // 2) Basic wallet safety check.
-    if (_currentUser.walletBalance < _minimumWalletToStart) {
-      throw StateError(
-        'Insufficient balance. Please top up at least '
-        '${_minimumWalletToStart.toStringAsFixed(0)} EGP to start a ride.',
-      );
-    }
-
-    // 3) Simulate a short city ride.
-    final startedAt = DateTime.now().subtract(const Duration(minutes: 12));
-    final endedAt = DateTime.now();
-    final durationMinutes =
-        endedAt.difference(startedAt).inSeconds / 60.0; // fractional minutes
-    final distanceKm = 1.2; // Demo distance
-    final cost = double.parse(
-      (durationMinutes * _pricePerMinute).toStringAsFixed(1),
-    );
-
-    // 4) Charge wallet and update rides list.
-    await _chargeForRide(cost);
+  /// Creates a new ride entry when a ride starts.
+  Ride createRide({
+    required String scooterCode,
+    required DateTime startedAt,
+    required String fromName,
+  }) {
     final ride = Ride(
       id: 'r_${_rides.length + 1}',
-      scooterCode: scooter.code,
+      scooterCode: scooterCode,
       startedAt: startedAt,
+      endedAt: startedAt,
+      distanceKm: 0,
+      cost: 0,
+      fromName: fromName,
+      toName: '',
+    );
+    _rides = [ride, ..._rides];
+    return ride;
+  }
+
+  /// Completes an existing ride with final stats.
+  Ride completeRide({
+    required String id,
+    required DateTime endedAt,
+    required double distanceKm,
+    required double cost,
+    required String toName,
+  }) {
+    final index = _rides.indexWhere((r) => r.id == id);
+    if (index == -1) {
+      throw StateError('Ride with id $id not found');
+    }
+    final existing = _rides[index];
+    final updated = Ride(
+      id: existing.id,
+      scooterCode: existing.scooterCode,
+      startedAt: existing.startedAt,
       endedAt: endedAt,
       distanceKm: distanceKm,
       cost: cost,
-      fromName: scooter.locationName,
-      toName: 'Destination',
+      fromName: existing.fromName,
+      toName: toName,
     );
-    _rides = [ride, ..._rides];
-
-    return ride;
+    _rides[index] = updated;
+    return updated;
   }
 }

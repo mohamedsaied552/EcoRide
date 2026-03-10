@@ -1,8 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 
-import '../services/firebase_service.dart';
+import '../services/ride_service.dart';
 import '../widgets/qr_view.dart';
-import 'ride_summary_screen.dart';
+import 'ride_screen.dart';
 
 class QRScanScreen extends StatelessWidget {
   const QRScanScreen({super.key});
@@ -16,28 +16,21 @@ class QRScanScreen extends StatelessWidget {
       return;
     }
 
-    final service = FirebaseService();
+    final rideService = RideService();
     try {
-      final ride = await service.startAndCompleteDemoRide(code.trim());
-      final user = await service.fetchCurrentUser();
+      await rideService.startRide(code.trim());
       if (!context.mounted) return;
 
-      // Replace scanner with the ride summary so user cannot start multiple rides at once.
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => RideSummaryScreen(
-            ride: ride,
-            remainingBalance: user.walletBalance,
-          ),
-        ),
+        MaterialPageRoute(builder: (_) => const RideScreen()),
       );
     } on StateError catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message)),
       );
-    } catch (e) {
+    } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to start ride. Please try again.')),

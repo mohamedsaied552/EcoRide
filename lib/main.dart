@@ -1,10 +1,20 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:glider/firebase_options.dart';
 import 'screens/admin_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/map_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/ride_history_screen.dart';
+import 'screens/signup_screen.dart';
 import 'screens/splash_screen.dart';
 
-void main() => runApp(const ScooterApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const ScooterApp());
+}
 
 class ScooterApp extends StatelessWidget {
   const ScooterApp({super.key});
@@ -42,10 +52,7 @@ class ScooterApp extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: Color(0xFF1F2937),
           ),
-          bodyMedium: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF475467),
-          ),
+          bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF475467)),
         ),
         cardTheme: const CardThemeData(
           elevation: 0,
@@ -58,6 +65,10 @@ class ScooterApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
       routes: {
+        '/login': (_) => const LoginScreen(),
+        '/signup': (_) => const SignupScreen(),
+        '/map': (_) => const MapScreen(),
+        '/onboarding': (_) => const OnboardingScreen(),
         '/profile': (_) => const ProfileScreen(),
         '/history': (_) => const RideHistoryScreen(),
         '/admin': (_) => const AdminScreen(),
