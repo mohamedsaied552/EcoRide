@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firebase_service.dart';
 import 'map_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -18,6 +18,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  final FirebaseService _service = FirebaseService();
 
   Future signup() async {
     if (!_formKey.currentState!.validate()) return;
@@ -25,30 +26,40 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+      final success = await _service.signup(
+        nameController.text.trim(),
+        emailController.text.trim(),
+        passwordController.text.trim(),
       );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Account Created Successfully"),
-          backgroundColor: Color(0xFF1FAE6C),
-        ),
-      );
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Account Created Successfully"),
+            backgroundColor: Color(0xFF1FAE6C),
+          ),
+        );
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const MapScreen()),
-        (route) => false,
-      );
-    } on FirebaseAuthException catch (e) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MapScreen()),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Signup Failed. Please try again."),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message ?? "Signup Failed"),
+          content: Text("Signup Failed: $e"),
           backgroundColor: Colors.red,
         ),
       );

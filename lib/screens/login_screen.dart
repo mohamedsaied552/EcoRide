@@ -1,5 +1,5 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firebase_service.dart';
 import 'signup_screen.dart';
 import 'map_screen.dart';
 
@@ -16,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  final FirebaseService _service = FirebaseService();
 
   Future login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -23,30 +24,39 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+      final success = await _service.login(
+        emailController.text.trim(),
+        passwordController.text.trim(),
       );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Login Successful"),
-          backgroundColor: Color(0xFF1FAE6C),
-        ),
-      );
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Login Successful"),
+            backgroundColor: Color(0xFF1FAE6C),
+          ),
+        );
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const MapScreen()),
-        (route) => false,
-      );
-    } on FirebaseAuthException catch (e) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MapScreen()),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Invalid email or password"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message ?? "Login Failed"),
+          content: Text("Login Failed: $e"),
           backgroundColor: Colors.red,
         ),
       );
