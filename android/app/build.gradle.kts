@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    id("com.google.gms.google-services")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -15,10 +14,10 @@ android {
     }
 
     kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
-}
 
     defaultConfig {
         applicationId = "com.glider.scooter"
@@ -37,12 +36,4 @@ android {
 
 flutter {
     source = "../.."
-}
-
-dependencies {
-
-    implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
-
-    implementation("com.google.firebase:firebase-auth")
-
 }

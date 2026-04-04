@@ -1,4 +1,4 @@
-﻿class AppUser {
+class AppUser {
   final String id;
   final String name;
   final String email;
@@ -6,6 +6,10 @@
   final double walletBalance;
   final int ridesCount;
   final double rating;
+  final String? avatarUrl;
+  final String? accountStatus;
+  final String? idVerificationStatus;
+  final bool phoneVerified;
 
   const AppUser({
     required this.id,
@@ -15,6 +19,10 @@
     required this.walletBalance,
     required this.ridesCount,
     required this.rating,
+    this.avatarUrl,
+    this.accountStatus,
+    this.idVerificationStatus,
+    this.phoneVerified = false,
   });
 
   AppUser copyWith({
@@ -25,6 +33,10 @@
     double? walletBalance,
     int? ridesCount,
     double? rating,
+    String? avatarUrl,
+    String? accountStatus,
+    String? idVerificationStatus,
+    bool? phoneVerified,
   }) {
     return AppUser(
       id: id ?? this.id,
@@ -34,18 +46,27 @@
       walletBalance: walletBalance ?? this.walletBalance,
       ridesCount: ridesCount ?? this.ridesCount,
       rating: rating ?? this.rating,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      accountStatus: accountStatus ?? this.accountStatus,
+      idVerificationStatus:
+          idVerificationStatus ?? this.idVerificationStatus,
+      phoneVerified: phoneVerified ?? this.phoneVerified,
     );
   }
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
       id: json['id'] as String,
-      name: json['name'] as String,
+      name: (json['name'] ?? json['fullName'] ?? '') as String,
       email: json['email'] as String,
-      phone: json['phone'] as String,
-      walletBalance: (json['walletBalance'] as num).toDouble(),
-      ridesCount: json['ridesCount'] as int,
-      rating: (json['rating'] as num).toDouble(),
+      phone: (json['phone'] ?? json['phoneNumber'] ?? '') as String,
+      walletBalance: ((json['walletBalance'] ?? 0) as num).toDouble(),
+      ridesCount: (json['ridesCount'] ?? 0) as int,
+      rating: ((json['rating'] ?? 0) as num).toDouble(),
+      avatarUrl: json['avatarUrl'] as String?,
+      accountStatus: json['accountStatus'] as String?,
+      idVerificationStatus: json['idVerificationStatus'] as String?,
+      phoneVerified: (json['phoneVerified'] ?? false) as bool,
     );
   }
 
@@ -53,11 +74,17 @@
     return {
       'id': id,
       'name': name,
+      'fullName': name,
       'email': email,
       'phone': phone,
+      'phoneNumber': phone,
       'walletBalance': walletBalance,
       'ridesCount': ridesCount,
       'rating': rating,
+      'avatarUrl': avatarUrl,
+      'accountStatus': accountStatus,
+      'idVerificationStatus': idVerificationStatus,
+      'phoneVerified': phoneVerified,
     };
   }
 }

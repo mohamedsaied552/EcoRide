@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
+
 import '../models/scooter.dart';
-import '../services/firebase_service.dart';
+import '../services/backend_service.dart';
 import '../widgets/loading_spinner.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -11,7 +12,7 @@ class AdminScreen extends StatefulWidget {
 }
 
 class _AdminScreenState extends State<AdminScreen> {
-  final FirebaseService _service = FirebaseService();
+  final BackendService _service = BackendService();
   List<Scooter> _scooters = const [];
   bool _loading = true;
 
@@ -33,7 +34,7 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Admin Dashboard")),
+      appBar: AppBar(title: const Text('Admin Dashboard')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: _loading
@@ -66,9 +67,7 @@ class _AdminScreenState extends State<AdminScreen> {
                               scooter.isAvailable
                                   ? Icons.check_circle
                                   : Icons.remove_circle,
-                              color: scooter.isAvailable
-                                  ? Colors.green
-                                  : Colors.grey,
+                              color: scooter.isAvailable ? Colors.green : Colors.grey,
                             ),
                             title: Text(scooter.code),
                             subtitle: Text(
@@ -81,7 +80,7 @@ class _AdminScreenState extends State<AdminScreen> {
                         );
                       },
                     ),
-                  )
+                  ),
                 ],
               ),
       ),

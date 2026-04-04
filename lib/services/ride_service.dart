@@ -6,7 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/ride.dart';
 import '../models/scooter.dart';
 import '../models/user.dart';
-import 'firebase_service.dart';
+import 'backend_service.dart';
 import 'geofence_service.dart';
 import 'iot_service.dart';
 import 'scooter_service.dart';
@@ -70,7 +70,7 @@ class RideService {
 
   factory RideService() => _instance;
 
-  final FirebaseService _backend = FirebaseService();
+  final BackendService _backend = BackendService();
   final ScooterService _scooterService = ScooterService();
   final IoTService _iot = IoTService();
   final GeofenceService _geofence = GeofenceService();

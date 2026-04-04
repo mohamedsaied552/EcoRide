@@ -1,7 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../models/scooter.dart';
-import 'firebase_service.dart';
+import 'backend_service.dart';
 import 'iot_service.dart';
 
 enum ScooterStatus {
@@ -19,7 +19,7 @@ class ScooterService {
 
   factory ScooterService() => _instance;
 
-  final FirebaseService _backend = FirebaseService();
+  final BackendService _backend = BackendService();
   final IoTService _iot = IoTService();
 
   final Map<String, ScooterStatus> _status = <String, ScooterStatus>{};
