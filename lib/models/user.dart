@@ -1,16 +1,6 @@
-class AppUser {
-  final String id;
-  final String name;
-  final String email;
-  final String phone;
-  final double walletBalance;
-  final int ridesCount;
-  final double rating;
-  final String? avatarUrl;
-  final String? accountStatus;
-  final String? idVerificationStatus;
-  final bool phoneVerified;
+enum UserRole { user, admin }
 
+class AppUser {
   const AppUser({
     required this.id,
     required this.name,
@@ -23,7 +13,23 @@ class AppUser {
     this.accountStatus,
     this.idVerificationStatus,
     this.phoneVerified = false,
+    this.role = UserRole.user,
   });
+
+  final String id;
+  final String name;
+  final String email;
+  final String phone;
+  final double walletBalance;
+  final int ridesCount;
+  final double rating;
+  final String? avatarUrl;
+  final String? accountStatus;
+  final String? idVerificationStatus;
+  final bool phoneVerified;
+  final UserRole role;
+
+  bool get isAdmin => role == UserRole.admin;
 
   AppUser copyWith({
     String? id,
@@ -37,6 +43,7 @@ class AppUser {
     String? accountStatus,
     String? idVerificationStatus,
     bool? phoneVerified,
+    UserRole? role,
   }) {
     return AppUser(
       id: id ?? this.id,
@@ -51,6 +58,7 @@ class AppUser {
       idVerificationStatus:
           idVerificationStatus ?? this.idVerificationStatus,
       phoneVerified: phoneVerified ?? this.phoneVerified,
+      role: role ?? this.role,
     );
   }
 
@@ -67,7 +75,17 @@ class AppUser {
       accountStatus: json['accountStatus'] as String?,
       idVerificationStatus: json['idVerificationStatus'] as String?,
       phoneVerified: (json['phoneVerified'] ?? false) as bool,
+      role: _roleFromString((json['role'] ?? 'user') as String),
     );
+  }
+
+  static UserRole _roleFromString(String role) {
+    switch (role.toLowerCase()) {
+      case 'admin':
+        return UserRole.admin;
+      default:
+        return UserRole.user;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -85,6 +103,7 @@ class AppUser {
       'accountStatus': accountStatus,
       'idVerificationStatus': idVerificationStatus,
       'phoneVerified': phoneVerified,
+      'role': role.name,
     };
   }
 }

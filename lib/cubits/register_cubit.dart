@@ -4,12 +4,15 @@ import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../models/user.dart';
 import '../services/backend_service.dart';
 import '../services/image_picker_service.dart';
 
 enum RegisterStep { details, idScan }
 
 enum RegisterSubmissionStatus { idle, loading, success, failure }
+
+enum RegisterImageSide { front, back }
 
 class RegisterState {
   const RegisterState({
@@ -18,14 +21,17 @@ class RegisterState {
     this.phoneNumber = '',
     this.password = '',
     this.confirmPassword = '',
-    this.idImageBytes,
-    this.idImageName,
+    this.frontIdBytes,
+    this.frontIdName,
+    this.backIdBytes,
+    this.backIdName,
     this.currentStep = RegisterStep.details,
     this.isPasswordObscured = true,
     this.isConfirmPasswordObscured = true,
     this.submissionStatus = RegisterSubmissionStatus.idle,
     this.errorMessage,
     this.imageError,
+    this.createdUser,
   });
 
   final String fullName;
@@ -33,16 +39,23 @@ class RegisterState {
   final String phoneNumber;
   final String password;
   final String confirmPassword;
-  final Uint8List? idImageBytes;
-  final String? idImageName;
+  final Uint8List? frontIdBytes;
+  final String? frontIdName;
+  final Uint8List? backIdBytes;
+  final String? backIdName;
   final RegisterStep currentStep;
   final bool isPasswordObscured;
   final bool isConfirmPasswordObscured;
   final RegisterSubmissionStatus submissionStatus;
   final String? errorMessage;
   final String? imageError;
+  final AppUser? createdUser;
 
-  bool get hasIdImage => idImageBytes != null && idImageBytes!.isNotEmpty;
+  bool get hasFrontId => frontIdBytes != null && frontIdBytes!.isNotEmpty;
+
+  bool get hasBackId => backIdBytes != null && backIdBytes!.isNotEmpty;
+
+  bool get hasBothIdImages => hasFrontId && hasBackId;
 
   RegisterState copyWith({
     String? fullName,
@@ -50,15 +63,19 @@ class RegisterState {
     String? phoneNumber,
     String? password,
     String? confirmPassword,
-    Uint8List? idImageBytes,
-    String? idImageName,
+    Uint8List? frontIdBytes,
+    String? frontIdName,
+    Uint8List? backIdBytes,
+    String? backIdName,
     RegisterStep? currentStep,
     bool? isPasswordObscured,
     bool? isConfirmPasswordObscured,
     RegisterSubmissionStatus? submissionStatus,
     String? errorMessage,
     String? imageError,
-    bool clearIdImage = false,
+    AppUser? createdUser,
+    bool clearFrontId = false,
+    bool clearBackId = false,
     bool clearErrorMessage = false,
     bool clearImageError = false,
   }) {
@@ -68,8 +85,10 @@ class RegisterState {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       password: password ?? this.password,
       confirmPassword: confirmPassword ?? this.confirmPassword,
-      idImageBytes: clearIdImage ? null : (idImageBytes ?? this.idImageBytes),
-      idImageName: clearIdImage ? null : (idImageName ?? this.idImageName),
+      frontIdBytes: clearFrontId ? null : (frontIdBytes ?? this.frontIdBytes),
+      frontIdName: clearFrontId ? null : (frontIdName ?? this.frontIdName),
+      backIdBytes: clearBackId ? null : (backIdBytes ?? this.backIdBytes),
+      backIdName: clearBackId ? null : (backIdName ?? this.backIdName),
       currentStep: currentStep ?? this.currentStep,
       isPasswordObscured: isPasswordObscured ?? this.isPasswordObscured,
       isConfirmPasswordObscured:
@@ -77,6 +96,7 @@ class RegisterState {
       submissionStatus: submissionStatus ?? this.submissionStatus,
       errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
       imageError: clearImageError ? null : (imageError ?? this.imageError),
+      createdUser: createdUser ?? this.createdUser,
     );
   }
 }
@@ -144,7 +164,10 @@ class RegisterCubit extends Cubit<RegisterState> {
     );
   }
 
-  Future<void> pickIdImage(ImageSource source) async {
+  Future<void> pickIdImage({
+    required RegisterImageSide side,
+    required ImageSource source,
+  }) async {
     emit(
       state.copyWith(
         submissionStatus: RegisterSubmissionStatus.idle,
@@ -160,25 +183,43 @@ class RegisterCubit extends Cubit<RegisterState> {
         return;
       }
 
-      emit(
-        state.copyWith(
-          idImageBytes: image.bytes,
-          idImageName: image.fileName,
-          clearImageError: true,
-        ),
-      );
+      if (side == RegisterImageSide.front) {
+        emit(
+          state.copyWith(
+            frontIdBytes: image.bytes,
+            frontIdName: image.fileName,
+            clearImageError: true,
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            backIdBytes: image.bytes,
+            backIdName: image.fileName,
+            clearImageError: true,
+          ),
+        );
+      }
     } catch (error) {
       emit(state.copyWith(imageError: error.toString()));
     }
   }
 
-  void clearSelectedIdImage() {
-    emit(state.copyWith(clearIdImage: true, clearImageError: true));
+  void clearSelectedIdImage(RegisterImageSide side) {
+    if (side == RegisterImageSide.front) {
+      emit(state.copyWith(clearFrontId: true, clearImageError: true));
+    } else {
+      emit(state.copyWith(clearBackId: true, clearImageError: true));
+    }
   }
 
   Future<void> submitRegistration() async {
-    if (!state.hasIdImage) {
-      emit(state.copyWith(imageError: 'Please upload a clear ID image.'));
+    if (!state.hasBothIdImages) {
+      emit(
+        state.copyWith(
+          imageError: 'Please upload both front and back images of your ID.',
+        ),
+      );
       return;
     }
 
@@ -191,17 +232,20 @@ class RegisterCubit extends Cubit<RegisterState> {
     );
 
     try {
-      final imagePayload = base64Encode(state.idImageBytes!);
-      await _backendService.signup(
+      final frontPayload = base64Encode(state.frontIdBytes!);
+      final backPayload = base64Encode(state.backIdBytes!);
+      final createdUser = await _backendService.signup(
         fullName: state.fullName.trim(),
         email: state.email.trim(),
         phoneNumber: state.phoneNumber.trim(),
         password: state.password,
-        idPhotoUrl: 'data:image/jpeg;base64,$imagePayload',
+        idFrontPhotoUrl: 'data:image/jpeg;base64,$frontPayload',
+        idBackPhotoUrl: 'data:image/jpeg;base64,$backPayload',
       );
       emit(
         state.copyWith(
           submissionStatus: RegisterSubmissionStatus.success,
+          createdUser: createdUser,
           clearErrorMessage: true,
         ),
       );

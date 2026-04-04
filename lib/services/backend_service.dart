@@ -18,7 +18,7 @@ class ApiException implements Exception {
 
 class BackendService {
   BackendService._internal() {
-    _seedLocalData();
+    _seedLocalRideHistory();
   }
 
   static final BackendService _instance = BackendService._internal();
@@ -48,8 +48,11 @@ class BackendService {
 
   String? _accessToken;
   AppUser? _currentUser;
-  late List<Scooter> _scooters;
   late List<Ride> _rides;
+
+  String get activeBaseUrl => baseUrl;
+
+  AppUser? get currentUser => _currentUser;
 
   bool get isLoggedIn => _accessToken != null;
 
@@ -81,6 +84,25 @@ class BackendService {
     }
 
     return response.body;
+  }
+
+  Future<http.Response> _sendRequest(
+    Future<http.Response> Function() request,
+  ) async {
+    try {
+      return await request();
+    } on Exception catch (error) {
+      final message = error.toString().toLowerCase();
+      if (message.contains('failed host lookup') ||
+          message.contains('connection refused') ||
+          message.contains('failed to fetch') ||
+          message.contains('clientexception')) {
+        throw ApiException(
+          'Could not reach the server at $baseUrl. Check your API base URL and make sure the backend is running.',
+        );
+      }
+      throw ApiException('Unexpected network error: $error');
+    }
   }
 
   Future<Map<String, dynamic>> _post(
@@ -153,56 +175,23 @@ class BackendService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  Future<http.Response> _sendRequest(
-    Future<http.Response> Function() request,
-  ) async {
-    try {
-      return await request();
-    } on Exception catch (error) {
-      final message = error.toString().toLowerCase();
-      if (message.contains('failed host lookup') ||
-          message.contains('connection refused') ||
-          message.contains('failed to fetch') ||
-          message.contains('clientexception')) {
-        throw ApiException(
-          'Could not reach the server at $baseUrl. Check your API base URL and make sure the backend is running.',
-        );
-      }
-      throw ApiException('Unexpected network error: $error');
+  Future<void> _delete(
+    String path, {
+    bool authenticated = false,
+  }) async {
+    final response = await _sendRequest(
+      () => _client.delete(
+        _uri(path),
+        headers: _headers(authenticated: authenticated),
+      ),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(_readError(response));
     }
   }
 
-  void _seedLocalData() {
-    _scooters = const [
-      Scooter(
-        id: 's_01',
-        code: 'SCT-102',
-        lat: 30.045,
-        lng: 31.234,
-        batteryPercent: 78,
-        isAvailable: true,
-        locationName: 'Garden City',
-      ),
-      Scooter(
-        id: 's_02',
-        code: 'SCT-221',
-        lat: 30.046,
-        lng: 31.236,
-        batteryPercent: 62,
-        isAvailable: true,
-        locationName: 'Downtown',
-      ),
-      Scooter(
-        id: 's_03',
-        code: 'SCT-315',
-        lat: 30.042,
-        lng: 31.232,
-        batteryPercent: 40,
-        isAvailable: false,
-        locationName: 'Tahrir Square',
-      ),
-    ];
-
+  void _seedLocalRideHistory() {
     final now = DateTime.now();
     _rides = [
       Ride(
@@ -232,44 +221,47 @@ class BackendService {
     return AppUser.fromJson(json).copyWith(
       ridesCount: _rides.length,
       rating: _currentUser?.rating ?? 4.9,
-      walletBalance: _currentUser?.walletBalance ?? 0,
+      walletBalance: ((json['walletBalance'] ?? _currentUser?.walletBalance ?? 0)
+              as num)
+          .toDouble(),
     );
   }
 
-  void _storeAuthResult(Map<String, dynamic> data) {
+  AppUser _storeAuthResult(Map<String, dynamic> data) {
     final userJson = data['user'] as Map<String, dynamic>? ?? <String, dynamic>{};
     final tokenJson =
         data['token'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
     _accessToken = tokenJson['accessToken'] as String?;
     _currentUser = _mapApiUser(userJson);
+    return _currentUser!;
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<AppUser> login(String email, String password) async {
     final data = await _post('/api/Auth/login', {
       'email': email,
       'password': password,
     });
-    _storeAuthResult(data);
-    return true;
+    return _storeAuthResult(data);
   }
 
-  Future<bool> signup({
+  Future<AppUser> signup({
     required String fullName,
     required String email,
     required String phoneNumber,
     required String password,
-    required String idPhotoUrl,
+    required String idFrontPhotoUrl,
+    required String idBackPhotoUrl,
   }) async {
     final data = await _post('/api/Auth/register', {
       'fullName': fullName,
       'email': email,
       'phoneNumber': phoneNumber,
       'password': password,
-      'idPhotoUrl': idPhotoUrl,
+      'idFrontPhotoUrl': idFrontPhotoUrl,
+      'idBackPhotoUrl': idBackPhotoUrl,
     });
-    _storeAuthResult(data);
-    return true;
+    return _storeAuthResult(data);
   }
 
   Future<void> verifyEmail({
@@ -278,10 +270,7 @@ class BackendService {
   }) async {
     await _post(
       '/api/Auth/verify-email',
-      {
-        'email': email,
-        'code': code,
-      },
+      {'email': email, 'code': code},
       authenticated: true,
     );
   }
@@ -315,14 +304,13 @@ class BackendService {
     }
 
     final data = await _get('/api/Auth/profile', authenticated: true);
-    _currentUser = _mapApiUser(data).copyWith(
-      walletBalance: _currentUser?.walletBalance ?? 0,
-    );
+    _currentUser = _mapApiUser(data);
     return _currentUser!;
   }
 
   Future<AppUser> updateProfile({
     required String fullName,
+    required String email,
     required String phoneNumber,
     String? avatarUrl,
   }) async {
@@ -330,14 +318,13 @@ class BackendService {
       '/api/Auth/profile',
       {
         'fullName': fullName,
+        'email': email,
         'phoneNumber': phoneNumber,
         'avatarUrl': avatarUrl,
       },
       authenticated: true,
     );
-    _currentUser = _mapApiUser(data).copyWith(
-      walletBalance: _currentUser?.walletBalance ?? 0,
-    );
+    _currentUser = _mapApiUser(data);
     return _currentUser!;
   }
 
@@ -361,7 +348,57 @@ class BackendService {
   }
 
   Future<List<Scooter>> fetchNearbyScooters() async {
-    return List<Scooter>.unmodifiable(_scooters);
+    final data = await _get('/api/scooters');
+    final scooters = (data['scooters'] as List<dynamic>? ?? <dynamic>[])
+        .map((item) => Scooter.fromJson(item as Map<String, dynamic>))
+        .toList();
+    return List<Scooter>.unmodifiable(scooters);
+  }
+
+  Future<List<AppUser>> fetchAdminUsers() async {
+    final data = await _get('/api/Admin/users', authenticated: true);
+    return (data['users'] as List<dynamic>? ?? <dynamic>[])
+        .map((item) => _mapApiUser(item as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  Future<List<Scooter>> fetchAdminScooters() async {
+    final data = await _get('/api/Admin/scooters', authenticated: true);
+    return (data['scooters'] as List<dynamic>? ?? <dynamic>[])
+        .map((item) => Scooter.fromJson(item as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  Future<List<Scooter>> saveAdminScooter({
+    String? id,
+    required String code,
+    required String locationName,
+    required double lat,
+    required double lng,
+    required int batteryPercent,
+    required bool isAvailable,
+  }) async {
+    final payload = {
+      'code': code,
+      'locationName': locationName,
+      'lat': lat,
+      'lng': lng,
+      'batteryPercent': batteryPercent,
+      'isAvailable': isAvailable,
+    };
+
+    if (id == null) {
+      await _post('/api/Admin/scooters', payload, authenticated: true);
+    } else {
+      await _put('/api/Admin/scooters/$id', payload, authenticated: true);
+    }
+
+    return fetchAdminScooters();
+  }
+
+  Future<List<Scooter>> deleteAdminScooter(String id) async {
+    await _delete('/api/Admin/scooters/$id', authenticated: true);
+    return fetchAdminScooters();
   }
 
   Future<List<Ride>> fetchRideHistory() async {
@@ -369,19 +406,28 @@ class BackendService {
   }
 
   Future<AppUser> topUpWallet(double amount) async {
-    if (amount <= 0) {
-      return fetchCurrentUser();
+    if (_currentUser == null) {
+      throw ApiException('Please log in first.');
     }
 
-    final user = await fetchCurrentUser();
-    _currentUser = user.copyWith(walletBalance: user.walletBalance + amount);
+    if (amount <= 0) {
+      return _currentUser!;
+    }
+
+    _currentUser = _currentUser!.copyWith(
+      walletBalance: _currentUser!.walletBalance + amount,
+    );
     return _currentUser!;
   }
 
   Future<AppUser> chargeForRide(double amount) async {
-    final user = await fetchCurrentUser();
-    final newBalance = (user.walletBalance - amount).clamp(0.0, 1000000.0);
-    _currentUser = user.copyWith(walletBalance: newBalance);
+    if (_currentUser == null) {
+      throw ApiException('Please log in first.');
+    }
+
+    final newBalance =
+        (_currentUser!.walletBalance - amount).clamp(0.0, 1000000.0);
+    _currentUser = _currentUser!.copyWith(walletBalance: newBalance);
     return _currentUser!;
   }
 

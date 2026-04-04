@@ -1,5 +1,8 @@
-﻿import 'package:flutter/material.dart';
-import '../services/payment_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../cubits/topup_cubit.dart';
+import '../cubits/user_cubit.dart';
 
 class TopUpScreen extends StatefulWidget {
   const TopUpScreen({super.key});
@@ -9,9 +12,9 @@ class TopUpScreen extends StatefulWidget {
 }
 
 class _TopUpScreenState extends State<TopUpScreen> {
-  final PaymentService _paymentService = PaymentService();
-  final TextEditingController _amountController = TextEditingController(text: '50');
-  bool _loading = false;
+  final TextEditingController _amountController = TextEditingController(
+    text: '50',
+  );
 
   @override
   void dispose() {
@@ -19,72 +22,97 @@ class _TopUpScreenState extends State<TopUpScreen> {
     super.dispose();
   }
 
-  Future<void> _pay(String method) async {
-    setState(() => _loading = true);
-    await _paymentService.topUp(
-      amount: double.tryParse(_amountController.text) ?? 0,
-      method: method,
-    );
-    if (!mounted) return;
-    setState(() => _loading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Top up successful via $method')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final methods = [
-      "Visa / MasterCard",
-      "Vodafone Cash",
-      "Orange Cash",
-      "Etisalat Cash",
-      "Instapay",
+      'Visa / MasterCard',
+      'Vodafone Cash',
+      'Orange Cash',
+      'Etisalat Cash',
+      'Instapay',
     ];
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Add Balance")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Enter amount",
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                prefixText: 'EGP ',
-                border: OutlineInputBorder(),
+    return BlocProvider(
+      create: (_) => TopUpCubit(),
+      child: BlocListener<TopUpCubit, TopUpState>(
+        listener: (context, state) async {
+          if (state.status == TopUpStatus.success) {
+            final amount = double.tryParse(_amountController.text) ?? 0;
+            await context.read<UserCubit>().topUp(amount);
+            if (!context.mounted) {
+              return;
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.successMessage ?? 'Top up successful')),
+            );
+            Navigator.pop(context);
+          }
+
+          if (state.status == TopUpStatus.failure && state.errorMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.errorMessage!),
+                backgroundColor: Colors.red,
               ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              "Choose payment method",
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            if (_loading)
-              const Center(child: CircularProgressIndicator())
-            else
-              ...methods.map(
-                (method) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton(
-                      onPressed: () => _pay(method),
-                      child: Text(method),
+            );
+          }
+        },
+        child: BlocBuilder<TopUpCubit, TopUpState>(
+          builder: (context, state) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Add Balance')),
+              body: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Enter amount',
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        prefixText: 'EGP ',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Choose payment method',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    if (state.status == TopUpStatus.loading)
+                      const Center(child: CircularProgressIndicator())
+                    else
+                      ...methods.map(
+                        (method) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                final amount =
+                                    double.tryParse(_amountController.text) ?? 0;
+                                context.read<TopUpCubit>().pay(
+                                      amount: amount,
+                                      method: method,
+                                    );
+                              },
+                              child: Text(method),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-          ],
+            );
+          },
         ),
       ),
     );

@@ -3,8 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../cubits/register_cubit.dart';
+import '../cubits/user_cubit.dart';
+import '../services/backend_service.dart';
 import '../widgets/id_upload_card.dart';
 import '../widgets/register_progress_indicator.dart';
+import 'admin_screen.dart';
 import 'map_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -40,7 +43,9 @@ class _SignupScreenState extends State<SignupScreen> {
         listenWhen: (previous, current) =>
             previous.submissionStatus != current.submissionStatus,
         listener: (context, state) {
-          if (state.submissionStatus == RegisterSubmissionStatus.success) {
+          if (state.submissionStatus == RegisterSubmissionStatus.success &&
+              state.createdUser != null) {
+            context.read<UserCubit>().applyAuthenticatedUser(state.createdUser!);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Account created successfully'),
@@ -49,7 +54,10 @@ class _SignupScreenState extends State<SignupScreen> {
             );
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (_) => const MapScreen()),
+              MaterialPageRoute(
+                builder: (_) =>
+                    state.createdUser!.isAdmin ? const AdminScreen() : const MapScreen(),
+              ),
               (route) => false,
             );
           }
@@ -66,8 +74,8 @@ class _SignupScreenState extends State<SignupScreen> {
         },
         child: BlocBuilder<RegisterCubit, RegisterState>(
           builder: (context, state) {
-            _syncControllers(state);
             final cubit = context.read<RegisterCubit>();
+            _syncControllers(state);
 
             return Scaffold(
               appBar: AppBar(
@@ -84,8 +92,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     children: [
                       Text(
                         state.currentStep == RegisterStep.details
-                            ? 'Tell us about yourself'
-                            : 'Verify your identity',
+                            ? 'Create your rider profile'
+                            : 'Upload both sides of your ID',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontSize: 28,
                             ),
@@ -93,11 +101,27 @@ class _SignupScreenState extends State<SignupScreen> {
                       const SizedBox(height: 8),
                       Text(
                         state.currentStep == RegisterStep.details
-                            ? 'Start with your account details, then upload your national ID.'
-                            : 'Upload a clear image of your ID to finish registration.',
+                            ? 'We will use these details to create your account and keep your rides secure.'
+                            : 'Make sure both images are sharp, readable, and fully visible.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Text(
+                          'Testing against: ${BackendService.baseUrl}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 12,
+                                color: const Color(0xFF0F7A52),
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       RegisterProgressIndicator(
                         currentStep:
                             state.currentStep == RegisterStep.details ? 1 : 2,
@@ -137,7 +161,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   },
                             style: _primaryButtonStyle(),
                             child: const Text(
-                              'Continue to ID Verification',
+                              'Continue to Verification',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -276,143 +300,118 @@ class _DetailsStep extends StatelessWidget {
         return Form(
           key: formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _FieldShell(
-                child: TextFormField(
-                  controller: nameController,
-                  textInputAction: TextInputAction.next,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: _inputDecoration(
-                    label: 'Full Name',
-                    hint: 'Enter your full legal name',
-                    icon: Icons.person_outline,
-                  ),
-                  onChanged: cubit.updateFullName,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your full name.';
-                    }
-                    if (value.trim().length < 3) {
-                      return 'Name must be at least 3 characters.';
-                    }
-                    return null;
-                  },
-                ),
+              _RegistrationField(
+                controller: nameController,
+                label: 'Full Name',
+                hint: 'Enter your full legal name',
+                icon: Icons.person_outline,
+                onChanged: cubit.updateFullName,
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your full name.';
+                  }
+                  if (value.trim().length < 3) {
+                    return 'Name must be at least 3 characters.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
-              _FieldShell(
-                child: TextFormField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  decoration: _inputDecoration(
-                    label: 'Email',
-                    hint: 'Enter your email address',
-                    icon: Icons.email_outlined,
-                  ),
-                  onChanged: cubit.updateEmail,
-                  validator: (value) {
-                    final email = value?.trim() ?? '';
-                    final pattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                    if (email.isEmpty) {
-                      return 'Please enter your email.';
-                    }
-                    if (!pattern.hasMatch(email)) {
-                      return 'Please enter a valid email address.';
-                    }
-                    return null;
-                  },
-                ),
+              _RegistrationField(
+                controller: emailController,
+                label: 'Email',
+                hint: 'Enter your email address',
+                icon: Icons.email_outlined,
+                onChanged: cubit.updateEmail,
+                textInputAction: TextInputAction.next,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  final email = value?.trim() ?? '';
+                  final pattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                  if (email.isEmpty) {
+                    return 'Please enter your email.';
+                  }
+                  if (!pattern.hasMatch(email)) {
+                    return 'Please enter a valid email address.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
-              _FieldShell(
-                child: TextFormField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  decoration: _inputDecoration(
-                    label: 'Phone Number',
-                    hint: 'Enter your mobile number',
-                    icon: Icons.phone_outlined,
-                  ),
-                  onChanged: cubit.updatePhoneNumber,
-                  validator: (value) {
-                    final phone = value?.replaceAll(RegExp(r'\s+'), '') ?? '';
-                    if (phone.isEmpty) {
-                      return 'Please enter your phone number.';
-                    }
-                    if (phone.length < 10) {
-                      return 'Phone number looks too short.';
-                    }
-                    return null;
-                  },
-                ),
+              _RegistrationField(
+                controller: phoneController,
+                label: 'Phone Number',
+                hint: 'Enter your mobile number',
+                icon: Icons.phone_outlined,
+                onChanged: cubit.updatePhoneNumber,
+                textInputAction: TextInputAction.next,
+                keyboardType: TextInputType.phone,
+                validator: (value) {
+                  final phone = value?.replaceAll(RegExp(r'\s+'), '') ?? '';
+                  if (phone.isEmpty) {
+                    return 'Please enter your phone number.';
+                  }
+                  if (phone.length < 10) {
+                    return 'Phone number looks too short.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
-              _FieldShell(
-                child: TextFormField(
-                  controller: passwordController,
-                  obscureText: state.isPasswordObscured,
-                  textInputAction: TextInputAction.next,
-                  decoration: _inputDecoration(
-                    label: 'Password',
-                    hint: 'Create a strong password',
-                    icon: Icons.lock_outline,
-                  ).copyWith(
-                    suffixIcon: IconButton(
-                      onPressed: cubit.togglePasswordVisibility,
-                      icon: Icon(
-                        state.isPasswordObscured
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                    ),
+              _RegistrationField(
+                controller: passwordController,
+                label: 'Password',
+                hint: 'Create a strong password',
+                icon: Icons.lock_outline,
+                onChanged: cubit.updatePassword,
+                textInputAction: TextInputAction.next,
+                obscureText: state.isPasswordObscured,
+                suffixIcon: IconButton(
+                  onPressed: cubit.togglePasswordVisibility,
+                  icon: Icon(
+                    state.isPasswordObscured
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
                   ),
-                  onChanged: cubit.updatePassword,
-                  validator: (value) {
-                    final password = value ?? '';
-                    if (password.isEmpty) {
-                      return 'Please enter a password.';
-                    }
-                    if (password.length < 8) {
-                      return 'Password must be at least 8 characters.';
-                    }
-                    return null;
-                  },
                 ),
+                validator: (value) {
+                  final password = value ?? '';
+                  if (password.isEmpty) {
+                    return 'Please enter a password.';
+                  }
+                  if (password.length < 8) {
+                    return 'Password must be at least 8 characters.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
-              _FieldShell(
-                child: TextFormField(
-                  controller: confirmPasswordController,
-                  obscureText: state.isConfirmPasswordObscured,
-                  textInputAction: TextInputAction.done,
-                  decoration: _inputDecoration(
-                    label: 'Confirm Password',
-                    hint: 'Re-enter your password',
-                    icon: Icons.lock_outline,
-                  ).copyWith(
-                    suffixIcon: IconButton(
-                      onPressed: cubit.toggleConfirmPasswordVisibility,
-                      icon: Icon(
-                        state.isConfirmPasswordObscured
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                    ),
+              _RegistrationField(
+                controller: confirmPasswordController,
+                label: 'Confirm Password',
+                hint: 'Re-enter your password',
+                icon: Icons.lock_outline,
+                onChanged: cubit.updateConfirmPassword,
+                obscureText: state.isConfirmPasswordObscured,
+                suffixIcon: IconButton(
+                  onPressed: cubit.toggleConfirmPasswordVisibility,
+                  icon: Icon(
+                    state.isConfirmPasswordObscured
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
                   ),
-                  onChanged: cubit.updateConfirmPassword,
-                  validator: (value) {
-                    if ((value ?? '').isEmpty) {
-                      return 'Please confirm your password.';
-                    }
-                    if (value != passwordController.text) {
-                      return 'Passwords do not match.';
-                    }
-                    return null;
-                  },
                 ),
+                validator: (value) {
+                  if ((value ?? '').isEmpty) {
+                    return 'Please confirm your password.';
+                  }
+                  if (value != passwordController.text) {
+                    return 'Passwords do not match.';
+                  }
+                  return null;
+                },
               ),
             ],
           ),
@@ -444,98 +443,114 @@ class _IdStep extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0x141FAE6C),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.verified_user_outlined,
-                  color: Color(0xFF1FAE6C),
-                ),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Text(
-                  'Make sure your ID is fully visible, readable, and free from glare before uploading.',
-                ),
-              ),
-            ],
+          child: const Text(
+            'Upload both the front and back of your national ID before submitting your registration.',
           ),
         ),
         const SizedBox(height: 20),
+        Text(
+          'Front side',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 10),
         IdUploadCard(
-          imageBytes: state.idImageBytes,
-          fileName: state.idImageName,
-          errorText: state.imageError,
-          onCameraTap: () => cubit.pickIdImage(ImageSource.camera),
-          onGalleryTap: () => cubit.pickIdImage(ImageSource.gallery),
-          onClear: cubit.clearSelectedIdImage,
+          imageBytes: state.frontIdBytes,
+          fileName: state.frontIdName,
+          errorText: state.imageError != null && !state.hasFrontId
+              ? state.imageError
+              : null,
+          onCameraTap: () => cubit.pickIdImage(
+            side: RegisterImageSide.front,
+            source: ImageSource.camera,
+          ),
+          onGalleryTap: () => cubit.pickIdImage(
+            side: RegisterImageSide.front,
+            source: ImageSource.gallery,
+          ),
+          onClear: () => cubit.clearSelectedIdImage(RegisterImageSide.front),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Back side',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 10),
+        IdUploadCard(
+          imageBytes: state.backIdBytes,
+          fileName: state.backIdName,
+          errorText: state.imageError != null && !state.hasBackId
+              ? state.imageError
+              : null,
+          onCameraTap: () => cubit.pickIdImage(
+            side: RegisterImageSide.back,
+            source: ImageSource.camera,
+          ),
+          onGalleryTap: () => cubit.pickIdImage(
+            side: RegisterImageSide.back,
+            source: ImageSource.gallery,
+          ),
+          onClear: () => cubit.clearSelectedIdImage(RegisterImageSide.back),
         ),
       ],
     );
   }
 }
 
-class _FieldShell extends StatelessWidget {
-  const _FieldShell({required this.child});
+class _RegistrationField extends StatelessWidget {
+  const _RegistrationField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.onChanged,
+    required this.validator,
+    this.textInputAction = TextInputAction.next,
+    this.keyboardType,
+    this.obscureText = false,
+    this.suffixIcon,
+  });
 
-  final Widget child;
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final ValueChanged<String> onChanged;
+  final FormFieldValidator<String> validator;
+  final TextInputAction textInputAction;
+  final TextInputType? keyboardType;
+  final bool obscureText;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A101828),
-            blurRadius: 18,
-            offset: Offset(0, 6),
-          ),
-        ],
+    return TextFormField(
+      controller: controller,
+      textInputAction: textInputAction,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFF1FAE6C), width: 1.5),
+        ),
       ),
-      child: child,
+      onChanged: onChanged,
+      validator: validator,
     );
   }
-}
-
-InputDecoration _inputDecoration({
-  required String label,
-  required String hint,
-  required IconData icon,
-}) {
-  return InputDecoration(
-    labelText: label,
-    hintText: hint,
-    prefixIcon: Icon(icon),
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: BorderSide.none,
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: Color(0xFF1FAE6C), width: 1.5),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: Color(0xFFEF4444)),
-    ),
-    focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-    ),
-  );
 }

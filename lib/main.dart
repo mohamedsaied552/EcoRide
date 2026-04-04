@@ -1,9 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:glider/screens/admin_screen.dart';
 
 import 'cubits/ride_cubit.dart';
+import 'cubits/user_cubit.dart';
 import 'cubits/wallet_cubit.dart';
+import 'screens/admin_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -11,6 +12,7 @@ import 'screens/profile_screen.dart';
 import 'screens/ride_history_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/wallet_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +21,7 @@ void main() {
       providers: [
         BlocProvider(create: (_) => RideCubit()),
         BlocProvider(create: (_) => WalletCubit()),
+        BlocProvider(create: (_) => UserCubit()),
       ],
       child: const ScooterApp(),
     ),
@@ -80,6 +83,7 @@ class ScooterApp extends StatelessWidget {
         '/onboarding': (_) => const OnboardingScreen(),
         '/profile': (_) => const ProfileScreen(),
         '/history': (_) => const RideHistoryScreen(),
+        '/wallet': (_) => const WalletScreen(),
         '/admin': (_) => const AdminScreen(),
       },
     );
