@@ -29,6 +29,7 @@ class _RideScreenState extends State<RideScreen> {
           CameraUpdate.newLatLng(event.scooterPosition),
         );
       }
+      if (!mounted) return;
       if (event.lowBalance) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -62,9 +63,7 @@ class _RideScreenState extends State<RideScreen> {
   Widget build(BuildContext context) {
     final state = _state;
     if (state == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final polyline = Polyline(
@@ -75,9 +74,7 @@ class _RideScreenState extends State<RideScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Active Ride'),
-      ),
+      appBar: AppBar(title: const Text('Active Ride')),
       body: Stack(
         children: [
           GoogleMap(
@@ -163,9 +160,7 @@ class _RideScreenState extends State<RideScreen> {
                           children: [
                             const Icon(Icons.route, size: 18),
                             const SizedBox(width: 6),
-                            Text(
-                              '${state.distanceKm.toStringAsFixed(2)} km',
-                            ),
+                            Text('${state.distanceKm.toStringAsFixed(2)} km'),
                           ],
                         ),
                         Row(
@@ -206,4 +201,3 @@ class _RideScreenState extends State<RideScreen> {
     );
   }
 }
-

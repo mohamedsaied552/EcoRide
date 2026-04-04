@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
-import '../services/firebase_service.dart';
-import 'signup_screen.dart';
+import 'package:flutter/material.dart';
+
+import '../services/backend_service.dart';
 import 'map_screen.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,11 +15,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final BackendService _service = BackendService();
+
   bool _obscurePassword = true;
   bool _isLoading = false;
-  final FirebaseService _service = FirebaseService();
 
-  Future login() async {
+  Future<void> login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -34,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Login Successful"),
+            content: Text('Login successful'),
             backgroundColor: Color(0xFF1FAE6C),
           ),
         );
@@ -44,19 +46,12 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const MapScreen()),
           (route) => false,
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Invalid email or password"),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Login Failed: $e"),
+          content: Text('Login failed: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -65,6 +60,79 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    final controller = TextEditingController(text: emailController.text.trim());
+    final messenger = ScaffoldMessenger.of(context);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        bool loading = false;
+        final navigator = Navigator.of(dialogContext);
+
+        return StatefulBuilder(
+          builder: (_, setDialogState) {
+            return AlertDialog(
+              title: const Text('Reset password'),
+              content: TextField(
+                controller: controller,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'Enter your account email',
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: loading ? null : () => navigator.pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          setDialogState(() => loading = true);
+                          try {
+                            await _service.forgotPassword(controller.text.trim());
+                            if (!navigator.mounted) return;
+                            navigator.pop();
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Reset instructions sent successfully.'),
+                                backgroundColor: Color(0xFF1FAE6C),
+                              ),
+                            );
+                          } catch (e) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('$e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          } finally {
+                            if (navigator.mounted) {
+                              setDialogState(() => loading = false);
+                            }
+                          }
+                        },
+                  child: loading
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Send'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
   }
 
   @override
@@ -86,7 +154,6 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                // Logo and Welcome
                 Center(
                   child: Container(
                     height: 80,
@@ -104,28 +171,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  "Welcome Back!",
-                  style: Theme.of(
-                    context,
-                  ).textTheme.headlineSmall?.copyWith(fontSize: 26),
+                  'Welcome Back!',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 26),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Sign in to continue your journey",
+                  'Sign in to continue your journey',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
-
-                // Email Field
                 TextFormField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
-                    labelText: "Email",
-                    hintText: "Enter your email",
+                    labelText: 'Email',
+                    hintText: 'Enter your email',
                     prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -136,10 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF1FAE6C),
-                        width: 2,
-                      ),
+                      borderSide: const BorderSide(color: Color(0xFF1FAE6C), width: 2),
                     ),
                     filled: true,
                     fillColor: Colors.white,
@@ -155,16 +215,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Password Field
                 TextFormField(
                   controller: passwordController,
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => login(),
                   decoration: InputDecoration(
-                    labelText: "Password",
-                    hintText: "Enter your password",
+                    labelText: 'Password',
+                    hintText: 'Enter your password',
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -185,10 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF1FAE6C),
-                        width: 2,
-                      ),
+                      borderSide: const BorderSide(color: Color(0xFF1FAE6C), width: 2),
                     ),
                     filled: true,
                     fillColor: Colors.white,
@@ -204,27 +259,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 8),
-
-                // Forgot Password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Password reset feature coming soon"),
-                        ),
-                      );
-                    },
+                    onPressed: _showForgotPasswordDialog,
                     child: const Text(
-                      "Forgot Password?",
+                      'Forgot Password?',
                       style: TextStyle(color: Color(0xFF1FAE6C)),
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Login Button
                 SizedBox(
                   height: 52,
                   child: ElevatedButton(
@@ -243,30 +288,23 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : const Text(
-                            "Sign In",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            'Sign In',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                   ),
                 ),
                 const SizedBox(height: 32),
-
-                // Divider
                 Row(
                   children: [
                     const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        "OR",
+                        'OR',
                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ),
@@ -274,20 +312,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 32),
-
-                // Social Login Buttons
                 SizedBox(
                   height: 52,
                   child: OutlinedButton.icon(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("Google sign-in coming soon"),
+                          content: Text('Google sign-in is not available'),
                         ),
                       );
                     },
                     icon: const Icon(Icons.g_mobiledata, size: 24),
-                    label: const Text("Continue with Google"),
+                    label: const Text('Continue with Google'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF1F2937),
                       side: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -298,8 +334,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-
-                // Sign Up Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -311,13 +345,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignupScreen(),
-                          ),
+                          MaterialPageRoute(builder: (context) => const SignupScreen()),
                         );
                       },
                       child: const Text(
-                        "Sign Up",
+                        'Sign Up',
                         style: TextStyle(
                           color: Color(0xFF1FAE6C),
                           fontWeight: FontWeight.w700,

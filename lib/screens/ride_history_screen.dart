@@ -1,6 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../models/ride.dart';
-import '../services/firebase_service.dart';
+import '../services/backend_service.dart';
 import '../widgets/loading_spinner.dart';
 
 class RideHistoryScreen extends StatefulWidget {
@@ -11,7 +11,7 @@ class RideHistoryScreen extends StatefulWidget {
 }
 
 class _RideHistoryScreenState extends State<RideHistoryScreen> {
-  final FirebaseService _service = FirebaseService();
+  final BackendService _service = BackendService();
   List<Ride> _rides = const [];
   bool _loading = true;
 
@@ -53,7 +53,7 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> {
                     child: ListTile(
                       leading: const Icon(Icons.electric_scooter),
                       title: Text('Scooter ${ride.scooterCode}'),
-                      subtitle: Text('${ride.fromName} → ${ride.toName}'),
+                      subtitle: Text('${ride.fromName} ? ${ride.toName}'),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,

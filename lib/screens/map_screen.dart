@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import '../models/scooter.dart';
-import '../services/firebase_service.dart';
+import '../services/backend_service.dart';
 import '../widgets/loading_spinner.dart';
 import '../widgets/map_marker.dart';
 import 'qr_scan_screen.dart';
@@ -18,24 +19,29 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? mapController;
   final LatLng _center = const LatLng(30.0444, 31.2357);
-  late final FirebaseService _service;
+  late final BackendService _service;
   List<Scooter> _scooters = const [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _service = FirebaseService();
+    _service = BackendService();
     _load();
   }
 
   Future<void> _load() async {
-    final scooters = await _service.fetchNearbyScooters();
-    if (!mounted) return;
-    setState(() {
-      _scooters = scooters;
-      _loading = false;
-    });
+    try {
+      final scooters = await _service.fetchNearbyScooters();
+      if (!mounted) return;
+      setState(() {
+        _scooters = scooters;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
   }
 
   @override
@@ -51,8 +57,9 @@ class _MapScreenState extends State<MapScreen> {
         )
         .toSet();
 
-    final availableScooters =
-        _scooters.where((scooter) => scooter.isAvailable).toList();
+    final availableScooters = _scooters
+        .where((scooter) => scooter.isAvailable)
+        .toList();
 
     final mapWidget = kIsWeb
         ? Container(
@@ -76,7 +83,7 @@ class _MapScreenState extends State<MapScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Nearby Scooters"),
+        title: const Text('Nearby Scooters'),
         actions: [
           IconButton(
             onPressed: () {
@@ -168,68 +175,63 @@ class _MapScreenState extends State<MapScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      "Available scooters",
+                      'Available scooters',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 10),
                     if (availableScooters.isEmpty && !_loading)
                       Text(
-                        "No scooters nearby. Try a different area.",
+                        'No scooters nearby. Try a different area.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       )
                     else
                       ...availableScooters.take(2).map(
-                            (scooter) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF1FAE6C)
-                                          .withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.electric_scooter,
-                                      color: Color(0xFF1FAE6C),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          scooter.code,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        Text(
-                                          scooter.locationName,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  ScooterStatusChip(
-                                    batteryPercent: scooter.batteryPercent,
-                                    available: scooter.isAvailable,
-                                  ),
-                                ],
+                        (scooter) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1FAE6C).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.electric_scooter,
+                                  color: Color(0xFF1FAE6C),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      scooter.code,
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                    Text(
+                                      scooter.locationName,
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ScooterStatusChip(
+                                batteryPercent: scooter.batteryPercent,
+                                available: scooter.isAvailable,
+                              ),
+                            ],
                           ),
+                        ),
+                      ),
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.qr_code),
-                        label: const Text("Scan to unlock"),
+                        label: const Text('Scan to unlock'),
                         onPressed: () {
                           Navigator.push(
                             context,
@@ -237,7 +239,7 @@ class _MapScreenState extends State<MapScreen> {
                           );
                         },
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
