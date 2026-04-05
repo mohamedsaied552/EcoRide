@@ -1,37 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
-import 'qr_view_types.dart';
-
-class QrViewImpl extends StatefulWidget {
-  const QrViewImpl({super.key, required this.onScan});
-
-  final OnScan onScan;
+class QrViewMobile extends StatefulWidget {
+  const QrViewMobile({super.key});
 
   @override
-  State<QrViewImpl> createState() => _QrViewImplState();
+  State<QrViewMobile> createState() => _QrViewMobileState();
 }
 
-class _QrViewImplState extends State<QrViewImpl> {
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-  QRViewController? controller;
-
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
-  }
+class _QrViewMobileState extends State<QrViewMobile> {
+  bool isScanned = false;
 
   @override
   Widget build(BuildContext context) {
-    return QRView(
-      key: qrKey,
-      onQRViewCreated: (qrController) {
-        controller = qrController;
-        controller?.scannedDataStream.listen((scanData) {
-          widget.onScan(scanData.code);
-        });
-      },
+    return Scaffold(
+      appBar: AppBar(title: const Text("Scan QR")),
+      body: MobileScanner(
+        onDetect: (capture) {
+          if (isScanned) return;
+          if (capture.barcodes.isEmpty) return;
+
+          final String? code = capture.barcodes.first.rawValue;
+
+          if (code != null) {
+            isScanned = true;
+
+            print("Scanned: $code");
+
+            // مثال: ارجع بالكود للشاشة اللي قبلها
+            Navigator.pop(context, code);
+          }
+        },
+      ),
     );
   }
 }
