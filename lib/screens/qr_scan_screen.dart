@@ -56,7 +56,7 @@ class QRScanScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.qr_code_scanner),
+                    const Icon(Icons.qr_code),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
