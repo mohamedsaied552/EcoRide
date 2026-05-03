@@ -19,9 +19,7 @@ class _QrViewMobileState extends State<QrViewMobile> {
         onDetect: (capture) {
           if (isScanned) return;
           if (capture.barcodes.isEmpty) return;
-
           final String? code = capture.barcodes.first.rawValue;
-
           if (code != null) {
             isScanned = true;
 
@@ -30,6 +28,9 @@ class _QrViewMobileState extends State<QrViewMobile> {
             // مثال: ارجع بالكود للشاشة اللي قبلها
             Navigator.pop(context, code);
           }
+
+          isScanned = true;
+          Navigator.pop(context, code);
         },
       ),
     );

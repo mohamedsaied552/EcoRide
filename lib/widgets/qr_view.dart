@@ -1,15 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
-import 'qr_view_types.dart';
-import 'qr_view_stub.dart' if (dart.library.io) 'qr_view_mobile.dart';
+typedef OnScan = Function(String code);
 
 class QrViewWidget extends StatelessWidget {
-  const QrViewWidget({super.key, required this.onScan});
-
   final OnScan onScan;
+
+  const QrViewWidget({super.key, required this.onScan});
 
   @override
   Widget build(BuildContext context) {
-    return QrViewImpl(onScan: onScan);
+    bool isScanned = false;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Scan QR")),
+      body: MobileScanner(
+        onDetect: (capture) {
+          if (isScanned) return;
+
+          final String? code = capture.barcodes.isNotEmpty ? capture.barcodes.first.rawValue : null;
+
+          if (code != null) {
+            isScanned = true;
+
+            onScan(code);
+
+            Navigator.pop(context);
+          }
+        },
+      ),
+    );
   }
 }

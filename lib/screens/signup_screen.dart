@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 
 import '../cubits/register_cubit.dart';
 import '../cubits/user_cubit.dart';
-import '../services/backend_service.dart';
 import '../widgets/id_upload_card.dart';
 import '../widgets/register_progress_indicator.dart';
 import 'admin_screen.dart';
@@ -104,22 +103,6 @@ class _SignupScreenState extends State<SignupScreen> {
                             ? 'We will use these details to create your account and keep your rides secure.'
                             : 'Make sure both images are sharp, readable, and fully visible.',
                         style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Text(
-                          'Testing against: ${BackendService.baseUrl}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontSize: 12,
-                                color: const Color(0xFF0F7A52),
-                              ),
-                        ),
                       ),
                       const SizedBox(height: 20),
                       RegisterProgressIndicator(

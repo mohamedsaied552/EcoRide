@@ -8,7 +8,7 @@ class PaymentService {
     return true;
   }
 
-  /// In a real app this would call a backend; here it is a no-op.
+  /// Reserved for future ride charging logic.
   Future<bool> chargeRide({required double amount}) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     return true;
