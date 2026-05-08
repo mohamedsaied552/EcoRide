@@ -17,16 +17,13 @@ class _QrViewMobileState extends State<QrViewMobile> {
       appBar: AppBar(title: const Text("Scan QR")),
       body: MobileScanner(
         onDetect: (capture) {
-          if (isScanned) return;
-          if (capture.barcodes.isEmpty) return;
+          if (isScanned || capture.barcodes.isEmpty) {
+            return;
+          }
+
           final String? code = capture.barcodes.first.rawValue;
-          if (code != null) {
-            isScanned = true;
-
-            print("Scanned: $code");
-
-            // مثال: ارجع بالكود للشاشة اللي قبلها
-            Navigator.pop(context, code);
+          if (code == null) {
+            return;
           }
 
           isScanned = true;

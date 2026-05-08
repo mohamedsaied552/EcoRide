@@ -129,24 +129,24 @@ class RideService {
       throw StateError('Scooter is not available right now.');
     }
 
-    await _scooterService.unlockScooter(scooter.id);
-
-    final startedAt = DateTime.now();
-    final ride = _backend.createRide(
-      scooterCode: scooter.code,
-      startedAt: startedAt,
-      fromName: scooter.locationName,
+    final initialPosition = LatLng(scooter.lat, scooter.lng);
+    final ride = await _backend.startRide(
+      serialNumber: scooter.code,
+      userLatitude: initialPosition.latitude,
+      userLongitude: initialPosition.longitude,
     );
+
+    await _scooterService.unlockScooter(scooter.id);
     _currentRide = ride;
 
-    _scooterPosition = LatLng(scooter.lat, scooter.lng);
+    _scooterPosition = initialPosition;
     _userPosition = _scooterPosition;
     _route
       ..clear()
       ..add(_scooterPosition);
     _batteryPercent =
         await _iot.receiveBatteryLevel(scooter.id, initial: scooter.batteryPercent);
-    _duration = Duration.zero;
+    _duration = DateTime.now().difference(ride.startedAt);
     _distanceKm = 0;
     _lowBalance = false;
     _outsideGeofence = false;
@@ -165,7 +165,7 @@ class RideService {
   void _onTick(Scooter scooter) async {
     if (_currentRide == null) return;
 
-    _duration += const Duration(seconds: 1);
+    _duration = DateTime.now().difference(_currentRide!.startedAt);
 
     // Update scooter position & route.
     final newPos =
@@ -256,21 +256,16 @@ class RideService {
     _tickTimer?.cancel();
     _tickTimer = null;
 
-    final endedAt = DateTime.now();
-    final cost = calculateRideCost();
-
-    final updatedUser = await _backend.chargeForRide(cost);
-    _userSnapshot = updatedUser;
-
-    final completedRide = _backend.completeRide(
-      id: ride.id,
-      endedAt: endedAt,
-      distanceKm: _distanceKm,
-      cost: cost,
-      toName: 'Destination',
+    final completedRide = await _backend.endActiveRide(
+      userLatitude: _userPosition.latitude,
+      userLongitude: _userPosition.longitude,
+      endPhotoUrl: '',
     );
+    _userSnapshot = await _backend.fetchCurrentUser();
 
-    await _scooterService.lockScooter(ride.scooterCode);
+    final scooters = await _backend.fetchNearbyScooters();
+    final scooter = scooters.where((item) => item.code == ride.scooterCode).firstOrNull;
+    await _scooterService.lockScooter(scooter?.id ?? ride.scooterCode);
 
     _currentRide = null;
     _emitState(isActive: false);

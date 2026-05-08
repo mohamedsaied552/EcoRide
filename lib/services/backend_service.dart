@@ -1,181 +1,42 @@
-import 'dart:async';
-
+import '../core/constants/app_constants.dart';
+import '../core/errors/api_exception.dart';
 import '../models/ride.dart';
 import '../models/scooter.dart';
 import '../models/user.dart';
-
-class ApiException implements Exception {
-  ApiException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
-
-class _StoredUser {
-  _StoredUser({
-    required this.user,
-    required this.password,
-    required this.idFrontPhotoUrl,
-    required this.idBackPhotoUrl,
-  });
-
-  AppUser user;
-  String password;
-  String idFrontPhotoUrl;
-  String idBackPhotoUrl;
-}
+import 'api_service.dart';
+import 'auth_service.dart';
+import 'scooter_api_service.dart';
 
 class BackendService {
-  BackendService._internal() {
-    _seedData();
-  }
+  BackendService._internal({
+    AuthService? authService,
+    ScooterApiService? scooterApiService,
+    ApiService? apiService,
+  }) : _authService = authService ?? AuthService(),
+       _scooterApiService = scooterApiService ?? ScooterApiService(),
+       _apiService = apiService ?? ApiService();
 
   static final BackendService _instance = BackendService._internal();
 
   factory BackendService() => _instance;
 
-  final Map<String, _StoredUser> _usersByEmail = <String, _StoredUser>{};
-  final List<Scooter> _scooters = <Scooter>[];
-  late List<Ride> _rides;
+  final AuthService _authService;
+  final ScooterApiService _scooterApiService;
+  final ApiService _apiService;
 
+  final List<Ride> _rides = <Ride>[];
   AppUser? _currentUser;
 
-  String get activeBaseUrl => 'Local demo mode';
+  String get activeBaseUrl => AppConstants.baseUrl;
 
   AppUser? get currentUser => _currentUser;
 
   bool get isLoggedIn => _currentUser != null;
 
-  Future<void> _pause([int milliseconds = 220]) {
-    return Future<void>.delayed(Duration(milliseconds: milliseconds));
-  }
-
-  void _seedData() {
-    _rides = _seedRideHistory();
-    _scooters
-      ..clear()
-      ..addAll(_seedScooters());
-    _usersByEmail
-      ..clear()
-      ..addAll(_seedUsers());
-  }
-
-  List<Ride> _seedRideHistory() {
-    final now = DateTime.now();
-    return <Ride>[
-      Ride(
-        id: 'r_001',
-        scooterCode: 'SCT-102',
-        startedAt: now.subtract(const Duration(hours: 2, minutes: 30)),
-        endedAt: now.subtract(const Duration(hours: 2, minutes: 8)),
-        distanceKm: 2.4,
-        cost: 18.5,
-        fromName: 'Garden City',
-        toName: 'Downtown',
-      ),
-      Ride(
-        id: 'r_002',
-        scooterCode: 'SCT-221',
-        startedAt: now.subtract(const Duration(days: 1, hours: 3)),
-        endedAt: now.subtract(const Duration(days: 1, hours: 2, minutes: 35)),
-        distanceKm: 3.1,
-        cost: 22.0,
-        fromName: 'Zamalek',
-        toName: 'Opera',
-      ),
-    ];
-  }
-
-  List<Scooter> _seedScooters() {
-    return const <Scooter>[
-      Scooter(
-        id: 's_01',
-        code: 'SCT-102',
-        lat: 30.045,
-        lng: 31.234,
-        batteryPercent: 78,
-        isAvailable: true,
-        locationName: 'Garden City',
-      ),
-      Scooter(
-        id: 's_02',
-        code: 'SCT-221',
-        lat: 30.046,
-        lng: 31.236,
-        batteryPercent: 62,
-        isAvailable: true,
-        locationName: 'Downtown',
-      ),
-      Scooter(
-        id: 's_03',
-        code: 'SCT-315',
-        lat: 30.042,
-        lng: 31.232,
-        batteryPercent: 40,
-        isAvailable: false,
-        locationName: 'Tahrir Square',
-      ),
-    ];
-  }
-
-  Map<String, _StoredUser> _seedUsers() {
-    final admin = AppUser(
-      id: 'admin_001',
-      name: 'Fleet Admin',
-      email: 'admin@glider.com',
-      phone: '01000000000',
-      walletBalance: 0,
-      ridesCount: 0,
-      rating: 5,
-      accountStatus: 'Active',
-      idVerificationStatus: 'Verified',
-      phoneVerified: true,
-      role: UserRole.admin,
-    );
-
-    final demoUser = AppUser(
-      id: 'user_001',
-      name: 'Mohamed Said',
-      email: 'mohamed@example.com',
-      phone: '01004832172',
-      walletBalance: 120,
-      ridesCount: _rides.length,
-      rating: 4.9,
-      accountStatus: 'Active',
-      idVerificationStatus: 'Pending',
-      phoneVerified: true,
-      role: UserRole.user,
-    );
-
-    return <String, _StoredUser>{
-      admin.email.toLowerCase(): _StoredUser(
-        user: admin,
-        password: 'admin123',
-        idFrontPhotoUrl: '',
-        idBackPhotoUrl: '',
-      ),
-      demoUser.email.toLowerCase(): _StoredUser(
-        user: demoUser,
-        password: '12345678',
-        idFrontPhotoUrl: '',
-        idBackPhotoUrl: '',
-      ),
-    };
-  }
-
   Future<AppUser> login(String email, String password) async {
-    await _pause(350);
-    final storedUser = _usersByEmail[email.trim().toLowerCase()];
-    if (storedUser == null || storedUser.password != password) {
-      throw ApiException('Invalid email or password');
-    }
-
-    _currentUser = storedUser.user.copyWith(
-      ridesCount: storedUser.user.isAdmin ? 0 : _rides.length,
-    );
-    return _currentUser!;
+    final user = await _authService.login(email: email, password: password);
+    _currentUser = user;
+    return user;
   }
 
   Future<AppUser> signup({
@@ -186,52 +47,40 @@ class BackendService {
     required String idFrontPhotoUrl,
     required String idBackPhotoUrl,
   }) async {
-    await _pause(450);
-    final normalizedEmail = email.trim().toLowerCase();
-    if (_usersByEmail.containsKey(normalizedEmail)) {
-      throw ApiException('An account with this email already exists');
-    }
+    final idPhotoUrl = idFrontPhotoUrl.isNotEmpty
+        ? idFrontPhotoUrl
+        : idBackPhotoUrl;
 
-    final user = AppUser(
-      id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-      name: fullName.trim(),
-      email: normalizedEmail,
-      phone: phoneNumber.trim(),
-      walletBalance: 0,
-      ridesCount: _rides.length,
-      rating: 5,
-      accountStatus: 'Active',
-      idVerificationStatus: 'Pending',
-      phoneVerified: false,
-      role: UserRole.user,
-    );
-
-    _usersByEmail[normalizedEmail] = _StoredUser(
-      user: user,
+    final user = await _authService.register(
+      fullName: fullName,
+      email: email,
+      phoneNumber: phoneNumber,
       password: password,
-      idFrontPhotoUrl: idFrontPhotoUrl,
-      idBackPhotoUrl: idBackPhotoUrl,
+      idPhotoUrl: idPhotoUrl,
     );
     _currentUser = user;
-    return _currentUser!;
+    return user;
   }
 
   Future<void> verifyEmail({
     required String email,
     required String code,
   }) async {
-    await _pause();
+    await _apiService.post(
+      '/Auth/verify-email',
+      data: <String, dynamic>{'email': email, 'code': code},
+    );
   }
 
   Future<void> resendOtp(String email) async {
-    await _pause();
+    await _apiService.post(
+      '/Auth/resend-otp',
+      data: <String, dynamic>{'email': email},
+    );
   }
 
-  Future<void> forgotPassword(String email) async {
-    await _pause(280);
-    if (!_usersByEmail.containsKey(email.trim().toLowerCase())) {
-      throw ApiException('No account found for this email');
-    }
+  Future<void> forgotPassword(String email) {
+    return _authService.forgotPassword(email);
   }
 
   Future<void> resetPassword({
@@ -239,20 +88,20 @@ class BackendService {
     required String token,
     required String newPassword,
   }) async {
-    await _pause();
-    final storedUser = _usersByEmail[email.trim().toLowerCase()];
-    if (storedUser == null) {
-      throw ApiException('No account found for this email');
-    }
-    storedUser.password = newPassword;
+    await _apiService.post(
+      '/Auth/reset-password',
+      data: <String, dynamic>{
+        'email': email,
+        'token': token,
+        'newPassword': newPassword,
+      },
+    );
   }
 
   Future<AppUser> fetchCurrentUser() async {
-    await _pause(180);
-    if (_currentUser == null) {
-      throw ApiException('Please log in first.');
-    }
-    return _currentUser!;
+    final user = await _authService.getProfile();
+    _currentUser = user;
+    return user;
   }
 
   Future<AppUser> updateProfile({
@@ -261,137 +110,142 @@ class BackendService {
     required String phoneNumber,
     String? avatarUrl,
   }) async {
-    await _pause(300);
-    if (_currentUser == null) {
-      throw ApiException('Please log in first.');
-    }
-
-    final currentEmail = _currentUser!.email.toLowerCase();
-    final newEmail = email.trim().toLowerCase();
-    final existing = _usersByEmail[newEmail];
-    if (newEmail != currentEmail && existing != null) {
-      throw ApiException('Email is already in use');
-    }
-
-    final stored = _usersByEmail.remove(currentEmail);
-    if (stored == null) {
-      throw ApiException('Unable to update profile right now.');
-    }
-
-    final updatedUser = stored.user.copyWith(
-      name: fullName.trim(),
-      email: newEmail,
-      phone: phoneNumber.trim(),
+    final user = await _authService.updateProfile(
+      fullName: fullName,
+      phoneNumber: phoneNumber,
       avatarUrl: avatarUrl,
     );
-    stored.user = updatedUser;
-    _usersByEmail[newEmail] = stored;
-    _currentUser = updatedUser;
+
+    _currentUser = user.copyWith(
+      email: _currentUser?.email ?? email,
+    );
     return _currentUser!;
   }
 
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
-  }) async {
-    await _pause(260);
-    if (_currentUser == null) {
-      throw ApiException('Please log in first.');
-    }
-
-    final stored = _usersByEmail[_currentUser!.email.toLowerCase()];
-    if (stored == null) {
-      throw ApiException('Unable to update password right now.');
-    }
-    if (stored.password != currentPassword) {
-      throw ApiException('Current password is incorrect');
-    }
-    stored.password = newPassword;
+  }) {
+    return _authService.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
   }
 
   Future<void> logout() async {
-    await _pause(120);
     _currentUser = null;
+    await _authService.logout();
   }
 
-  Future<List<Scooter>> fetchNearbyScooters() async {
-    await _pause(220);
-    return List<Scooter>.unmodifiable(_scooters);
+  Future<List<Scooter>> fetchNearbyScooters() {
+    return _scooterApiService.getScooters();
   }
 
   Future<List<AppUser>> fetchAdminUsers() async {
-    await _pause(220);
-    _ensureAdmin();
-    return _usersByEmail.values
-        .map((entry) => entry.user)
-        .toList(growable: false);
+    throw ApiException(
+      'No admin users endpoint is available in the current API specification.',
+    );
   }
 
-  Future<List<Scooter>> fetchAdminScooters() async {
-    await _pause(220);
-    _ensureAdmin();
-    return List<Scooter>.unmodifiable(_scooters);
+  Future<List<Scooter>> fetchAdminScooters() {
+    return fetchNearbyScooters();
   }
 
   Future<List<Scooter>> saveAdminScooter({
     String? id,
     required String code,
+    required String modelId,
     required String locationName,
     required double lat,
     required double lng,
     required int batteryPercent,
     required bool isAvailable,
   }) async {
-    await _pause(280);
-    _ensureAdmin();
-
     if (id == null) {
-      _scooters.add(
-        Scooter(
-          id: 's_${DateTime.now().millisecondsSinceEpoch}',
-          code: code,
-          lat: lat,
-          lng: lng,
-          batteryPercent: batteryPercent,
-          isAvailable: isAvailable,
-          locationName: locationName,
-        ),
+      await _apiService.post(
+        '/Scooter',
+        data: <String, dynamic>{
+          'serialNumber': code,
+          'modelId': modelId,
+        },
       );
-    } else {
-      final index = _scooters.indexWhere((scooter) => scooter.id == id);
-      if (index == -1) {
-        throw ApiException('Scooter not found');
-      }
-      _scooters[index] = _scooters[index].copyWith(
-        code: code,
-        locationName: locationName,
-        lat: lat,
-        lng: lng,
-        batteryPercent: batteryPercent,
-        isAvailable: isAvailable,
-      );
+      return fetchNearbyScooters();
     }
 
-    return List<Scooter>.unmodifiable(_scooters);
+    await _apiService.put(
+      '/Scooter/$id',
+      data: <String, dynamic>{
+        'status': isAvailable ? 'Available' : 'Offline',
+      },
+    );
+
+    return fetchNearbyScooters();
   }
 
   Future<List<Scooter>> deleteAdminScooter(String id) async {
-    await _pause(220);
-    _ensureAdmin();
-    _scooters.removeWhere((scooter) => scooter.id == id);
-    return List<Scooter>.unmodifiable(_scooters);
+    await _apiService.delete('/Scooter/$id');
+    return fetchNearbyScooters();
   }
 
   Future<List<Ride>> fetchRideHistory() async {
-    await _pause(180);
     return List<Ride>.unmodifiable(_rides);
   }
 
-  Future<AppUser> topUpWallet(double amount) async {
-    await _pause(180);
-    if (_currentUser == null) {
-      throw ApiException('Please log in first.');
+  Future<Ride> startRide({
+    required String serialNumber,
+    required double userLatitude,
+    required double userLongitude,
+  }) async {
+    final data = await _apiService.post(
+      '/Ride/start',
+      data: <String, dynamic>{
+        'serialNumber': serialNumber,
+        'userLatitude': userLatitude,
+        'userLongitude': userLongitude,
+      },
+    );
+
+    final ride = Ride.fromJson(data);
+    _upsertRide(ride);
+    return ride;
+  }
+
+  Future<Ride?> fetchActiveRide() async {
+    try {
+      final data = await _apiService.get('/Ride/active');
+      final ride = Ride.fromJson(data);
+      _upsertRide(ride);
+      return ride;
+    } on ApiException catch (error) {
+      if (error.statusCode == 404) {
+        return null;
+      }
+      rethrow;
     }
+  }
+
+  Future<Ride> endActiveRide({
+    required double userLatitude,
+    required double userLongitude,
+    required String endPhotoUrl,
+  }) async {
+    final data = await _apiService.post(
+      '/Ride/active/end',
+      data: <String, dynamic>{
+        'userLatitude': userLatitude,
+        'userLongitude': userLongitude,
+        'endPhotoUrl': endPhotoUrl,
+      },
+    );
+
+    final ride = Ride.fromJson(data);
+    _upsertRide(ride);
+    _currentUser = await fetchCurrentUser();
+    return ride;
+  }
+
+  Future<AppUser> topUpWallet(double amount) async {
+    _currentUser ??= await fetchCurrentUser();
 
     if (amount <= 0) {
       return _currentUser!;
@@ -400,21 +254,18 @@ class BackendService {
     final updatedUser = _currentUser!.copyWith(
       walletBalance: _currentUser!.walletBalance + amount,
     );
-    _replaceCurrentUser(updatedUser);
-    return _currentUser!;
+    _currentUser = updatedUser;
+    return updatedUser;
   }
 
   Future<AppUser> chargeForRide(double amount) async {
-    await _pause(150);
-    if (_currentUser == null) {
-      throw ApiException('Please log in first.');
-    }
+    _currentUser ??= await fetchCurrentUser();
 
-    final newBalance =
-        (_currentUser!.walletBalance - amount).clamp(0.0, 1000000.0);
-    final updatedUser = _currentUser!.copyWith(walletBalance: newBalance);
-    _replaceCurrentUser(updatedUser);
-    return _currentUser!;
+    final updatedUser = _currentUser!.copyWith(
+      walletBalance: (_currentUser!.walletBalance - amount).clamp(0.0, 1000000.0),
+    );
+    _currentUser = updatedUser;
+    return updatedUser;
   }
 
   Ride createRide({
@@ -423,7 +274,7 @@ class BackendService {
     required String fromName,
   }) {
     final ride = Ride(
-      id: 'r_${_rides.length + 1}',
+      id: 'local_${DateTime.now().millisecondsSinceEpoch}',
       scooterCode: scooterCode,
       startedAt: startedAt,
       endedAt: startedAt,
@@ -432,7 +283,7 @@ class BackendService {
       fromName: fromName,
       toName: '',
     );
-    _rides = <Ride>[ride, ..._rides];
+    _rides.insert(0, ride);
     return ride;
   }
 
@@ -464,17 +315,12 @@ class BackendService {
     return updated;
   }
 
-  void _replaceCurrentUser(AppUser user) {
-    final stored = _usersByEmail[user.email.toLowerCase()];
-    if (stored != null) {
-      stored.user = user;
-    }
-    _currentUser = user;
-  }
-
-  void _ensureAdmin() {
-    if (_currentUser == null || !_currentUser!.isAdmin) {
-      throw ApiException('Admin access required');
+  void _upsertRide(Ride ride) {
+    final index = _rides.indexWhere((item) => item.id == ride.id);
+    if (index == -1) {
+      _rides.insert(0, ride);
+    } else {
+      _rides[index] = ride;
     }
   }
 }

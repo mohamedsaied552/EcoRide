@@ -233,14 +233,13 @@ class RegisterCubit extends Cubit<RegisterState> {
 
     try {
       final frontPayload = base64Encode(state.frontIdBytes!);
-      final backPayload = base64Encode(state.backIdBytes!);
       final createdUser = await _backendService.signup(
         fullName: state.fullName.trim(),
         email: state.email.trim(),
         phoneNumber: state.phoneNumber.trim(),
         password: state.password,
         idFrontPhotoUrl: 'data:image/jpeg;base64,$frontPayload',
-        idBackPhotoUrl: 'data:image/jpeg;base64,$backPayload',
+        idBackPhotoUrl: '',
       );
       emit(
         state.copyWith(

@@ -16,6 +16,7 @@ class AdminScreen extends StatefulWidget {
 
 class _AdminScreenState extends State<AdminScreen> {
   final _codeController = TextEditingController();
+  final _modelIdController = TextEditingController();
   final _locationController = TextEditingController();
   final _latController = TextEditingController();
   final _lngController = TextEditingController();
@@ -24,6 +25,7 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   void dispose() {
     _codeController.dispose();
+    _modelIdController.dispose();
     _locationController.dispose();
     _latController.dispose();
     _lngController.dispose();
@@ -109,6 +111,7 @@ class _AdminScreenState extends State<AdminScreen> {
                         _ScootersTab(
                           state: state,
                           codeController: _codeController,
+                          modelIdController: _modelIdController,
                           locationController: _locationController,
                           latController: _latController,
                           lngController: _lngController,
@@ -128,6 +131,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _syncControllers(AdminState state) {
     _sync(_codeController, state.code);
+    _sync(_modelIdController, state.modelId);
     _sync(_locationController, state.locationName);
     _sync(_latController, state.lat);
     _sync(_lngController, state.lng);
@@ -182,6 +186,7 @@ class _ScootersTab extends StatelessWidget {
   const _ScootersTab({
     required this.state,
     required this.codeController,
+    required this.modelIdController,
     required this.locationController,
     required this.latController,
     required this.lngController,
@@ -190,6 +195,7 @@ class _ScootersTab extends StatelessWidget {
 
   final AdminState state;
   final TextEditingController codeController;
+  final TextEditingController modelIdController;
   final TextEditingController locationController;
   final TextEditingController latController;
   final TextEditingController lngController;
@@ -219,6 +225,12 @@ class _ScootersTab extends StatelessWidget {
                     controller: codeController,
                     decoration: const InputDecoration(labelText: 'Scooter code'),
                     onChanged: cubit.updateCode,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: modelIdController,
+                    decoration: const InputDecoration(labelText: 'Model ID'),
+                    onChanged: cubit.updateModelId,
                   ),
                   const SizedBox(height: 12),
                   TextField(

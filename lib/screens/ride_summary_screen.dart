@@ -1,7 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../config/app_config.dart';
 import '../models/ride.dart';
+import '../widgets/map_unavailable_card.dart';
 
 class RideSummaryScreen extends StatelessWidget {
   const RideSummaryScreen({
@@ -43,34 +45,40 @@ class RideSummaryScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 child: route.isEmpty
                     ? const Center(child: Text('No route data'))
-                    : GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: route.first,
-                          zoom: 15,
-                        ),
-                        polylines: {polyline},
-                        markers: {
-                          if (route.isNotEmpty)
-                            Marker(
-                              markerId: const MarkerId('start'),
-                              position: route.first,
-                              icon: BitmapDescriptor.defaultMarkerWithHue(
-                                BitmapDescriptor.hueAzure,
-                              ),
+                    : AppConfig.hasGoogleMapsApiKey
+                        ? GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: route.first,
+                              zoom: 15,
                             ),
-                          if (route.length > 1)
-                            Marker(
-                              markerId: const MarkerId('end'),
-                              position: route.last,
-                              icon: BitmapDescriptor.defaultMarkerWithHue(
-                                BitmapDescriptor.hueGreen,
-                              ),
-                            ),
-                        },
-                        zoomControlsEnabled: false,
-                        myLocationButtonEnabled: false,
-                        liteModeEnabled: true,
-                      ),
+                            polylines: {polyline},
+                            markers: {
+                              if (route.isNotEmpty)
+                                Marker(
+                                  markerId: const MarkerId('start'),
+                                  position: route.first,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                                    BitmapDescriptor.hueAzure,
+                                  ),
+                                ),
+                              if (route.length > 1)
+                                Marker(
+                                  markerId: const MarkerId('end'),
+                                  position: route.last,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                                    BitmapDescriptor.hueGreen,
+                                  ),
+                                ),
+                            },
+                            zoomControlsEnabled: false,
+                            myLocationButtonEnabled: false,
+                            liteModeEnabled: true,
+                          )
+                        : const MapUnavailableCard(
+                            height: 160,
+                            message:
+                                'Route preview is unavailable until a Google Maps API key is added.',
+                          ),
               ),
             ),
             const SizedBox(height: 16),
@@ -153,7 +161,7 @@ class RideSummaryScreen extends StatelessWidget {
                 onPressed: () => Navigator.pop(context),
                 child: const Text("Done"),
               ),
-            )
+            ),
           ],
         ),
       ),

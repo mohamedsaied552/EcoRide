@@ -11,8 +11,9 @@ class ImagePickerService {
     try {
       final file = await _picker.pickImage(
         source: source,
-        imageQuality: 88,
-        maxWidth: 1800,
+        imageQuality: 55,
+        maxWidth: 960,
+        maxHeight: 960,
       );
 
       if (file == null) {

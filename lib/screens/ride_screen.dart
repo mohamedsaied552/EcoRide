@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../config/app_config.dart';
 import '../services/ride_service.dart';
+import '../widgets/map_unavailable_card.dart';
 
 class RideScreen extends StatefulWidget {
   const RideScreen({super.key});
@@ -77,31 +79,36 @@ class _RideScreenState extends State<RideScreen> {
       appBar: AppBar(title: const Text('Active Ride')),
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: state.scooterPosition,
-              zoom: 16,
-            ),
-            polylines: {polyline},
-            markers: {
-              Marker(
-                markerId: const MarkerId('scooter'),
-                position: state.scooterPosition,
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueGreen,
+          AppConfig.hasGoogleMapsApiKey
+              ? GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: state.scooterPosition,
+                    zoom: 16,
+                  ),
+                  polylines: {polyline},
+                  markers: {
+                    Marker(
+                      markerId: const MarkerId('scooter'),
+                      position: state.scooterPosition,
+                      icon: BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueGreen,
+                      ),
+                    ),
+                    Marker(
+                      markerId: const MarkerId('user'),
+                      position: state.userPosition,
+                      icon: BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueAzure,
+                      ),
+                    ),
+                  },
+                  myLocationButtonEnabled: false,
+                  onMapCreated: (controller) => _mapController = controller,
+                )
+              : const MapUnavailableCard(
+                  message:
+                      'Live map is unavailable until a Google Maps API key is configured.',
                 ),
-              ),
-              Marker(
-                markerId: const MarkerId('user'),
-                position: state.userPosition,
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueAzure,
-                ),
-              ),
-            },
-            myLocationButtonEnabled: false,
-            onMapCreated: (controller) => _mapController = controller,
-          ),
           Positioned(
             left: 16,
             right: 16,
