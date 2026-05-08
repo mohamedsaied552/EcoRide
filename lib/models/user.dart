@@ -63,10 +63,11 @@ class AppUser {
   }
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
+    final email = (json['email'] ?? '') as String;
     return AppUser(
       id: json['id'] as String,
       name: (json['name'] ?? json['fullName'] ?? '') as String,
-      email: json['email'] as String,
+      email: email,
       phone: (json['phone'] ?? json['phoneNumber'] ?? '') as String,
       walletBalance: ((json['walletBalance'] ?? 0) as num).toDouble(),
       ridesCount: (json['ridesCount'] ?? 0) as int,
@@ -75,8 +76,12 @@ class AppUser {
       accountStatus: json['accountStatus'] as String?,
       idVerificationStatus: json['idVerificationStatus'] as String?,
       phoneVerified: (json['phoneVerified'] ?? false) as bool,
-      role: _roleFromString((json['role'] ?? 'user') as String),
+      role: _roleFromString((json['role'] ?? _inferRoleFromEmail(email)) as String),
     );
+  }
+
+  static String _inferRoleFromEmail(String email) {
+    return email.toLowerCase().contains('admin') ? 'admin' : 'user';
   }
 
   static UserRole _roleFromString(String role) {

@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../config/app_config.dart';
 import '../cubits/map_cubit.dart';
 import '../cubits/user_cubit.dart';
 import '../models/scooter.dart';
 import '../widgets/app_user_drawer.dart';
 import '../widgets/loading_spinner.dart';
 import '../widgets/map_marker.dart';
+import '../widgets/map_unavailable_card.dart';
 import 'qr_scan_screen.dart';
 import 'wallet_screen.dart';
 
@@ -41,29 +43,26 @@ class MapScreen extends StatelessWidget {
                   )
                   .toSet();
 
-              final mapWidget = kIsWeb
-                  ? Container(
-                      color: const Color(0xFFEFF4F1),
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(
-                            Icons.map_outlined,
-                            size: 48,
-                            color: Color(0xFF1FAE6C),
-                          ),
-                          SizedBox(height: 8),
-                          Text('Map preview is not available on Web'),
-                        ],
-                      ),
-                    )
-                  : GoogleMap(
-                      initialCameraPosition:
-                          const CameraPosition(target: _center, zoom: 14.0),
-                      markers: markers,
-                      myLocationButtonEnabled: false,
-                    );
+              final Widget mapWidget;
+              if (kIsWeb) {
+                mapWidget = const MapUnavailableCard(
+                  message: 'Map preview is not available on Web.',
+                );
+              } else if (AppConfig.hasGoogleMapsApiKey) {
+                mapWidget = GoogleMap(
+                  initialCameraPosition: const CameraPosition(
+                    target: _center,
+                    zoom: 14.0,
+                  ),
+                  markers: markers,
+                  myLocationButtonEnabled: false,
+                );
+              } else {
+                mapWidget = const MapUnavailableCard(
+                  message:
+                      'Map is temporarily unavailable because the Google Maps API key is not configured yet.',
+                );
+              }
 
               return Scaffold(
                 appBar: AppBar(

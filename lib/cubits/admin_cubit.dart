@@ -12,6 +12,7 @@ class AdminState {
     this.users = const [],
     this.scooters = const [],
     this.code = '',
+    this.modelId = '',
     this.locationName = '',
     this.lat = '',
     this.lng = '',
@@ -26,6 +27,7 @@ class AdminState {
   final List<AppUser> users;
   final List<Scooter> scooters;
   final String code;
+  final String modelId;
   final String locationName;
   final String lat;
   final String lng;
@@ -42,6 +44,7 @@ class AdminState {
     List<AppUser>? users,
     List<Scooter>? scooters,
     String? code,
+    String? modelId,
     String? locationName,
     String? lat,
     String? lng,
@@ -59,6 +62,7 @@ class AdminState {
       users: users ?? this.users,
       scooters: scooters ?? this.scooters,
       code: code ?? this.code,
+      modelId: modelId ?? this.modelId,
       locationName: locationName ?? this.locationName,
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
@@ -111,6 +115,8 @@ class AdminCubit extends Cubit<AdminState> {
 
   void updateCode(String value) => emit(state.copyWith(code: value));
 
+  void updateModelId(String value) => emit(state.copyWith(modelId: value));
+
   void updateLocationName(String value) =>
       emit(state.copyWith(locationName: value));
 
@@ -129,6 +135,7 @@ class AdminCubit extends Cubit<AdminState> {
       state.copyWith(
         editingScooterId: scooter.id,
         code: scooter.code,
+        modelId: scooter.modelName ?? '',
         locationName: scooter.locationName,
         lat: scooter.lat.toString(),
         lng: scooter.lng.toString(),
@@ -144,6 +151,7 @@ class AdminCubit extends Cubit<AdminState> {
     emit(
       state.copyWith(
         code: '',
+        modelId: '',
         locationName: '',
         lat: '',
         lng: '',
@@ -162,6 +170,7 @@ class AdminCubit extends Cubit<AdminState> {
     final battery = int.tryParse(state.batteryPercent);
 
     if (state.code.trim().isEmpty ||
+        state.modelId.trim().isEmpty ||
         state.locationName.trim().isEmpty ||
         lat == null ||
         lng == null ||
@@ -187,6 +196,7 @@ class AdminCubit extends Cubit<AdminState> {
       final scooters = await _backendService.saveAdminScooter(
         id: state.editingScooterId,
         code: state.code.trim(),
+        modelId: state.modelId.trim(),
         locationName: state.locationName.trim(),
         lat: lat,
         lng: lng,
@@ -200,6 +210,7 @@ class AdminCubit extends Cubit<AdminState> {
           successMessage:
               state.isEditing ? 'Scooter updated.' : 'Scooter added.',
           code: '',
+          modelId: '',
           locationName: '',
           lat: '',
           lng: '',

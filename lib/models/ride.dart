@@ -22,15 +22,25 @@
   Duration get duration => endedAt.difference(startedAt);
 
   factory Ride.fromJson(Map<String, dynamic> json) {
+    final scooterCode =
+        (json['scooterCode'] ?? json['scooterSerialNumber'] ?? '') as String;
+    final startedAtRaw =
+        (json['startedAt'] ?? json['startTime'] ?? DateTime.now().toIso8601String())
+            as String;
+    final endedAtRaw =
+        (json['endedAt'] ?? json['endTime'] ?? startedAtRaw) as String;
+
     return Ride(
-      id: json['id'] as String,
-      scooterCode: json['scooterCode'] as String,
-      startedAt: DateTime.parse(json['startedAt'] as String),
-      endedAt: DateTime.parse(json['endedAt'] as String),
-      distanceKm: (json['distanceKm'] as num).toDouble(),
-      cost: (json['cost'] as num).toDouble(),
-      fromName: json['fromName'] as String,
-      toName: json['toName'] as String,
+      id: (json['id'] ?? json['rideId']).toString(),
+      scooterCode: scooterCode,
+      startedAt: DateTime.parse(startedAtRaw),
+      endedAt: DateTime.parse(endedAtRaw),
+      distanceKm: ((json['distanceKm'] ?? 0) as num).toDouble(),
+      cost:
+          ((json['cost'] ?? json['totalCost'] ?? json['currentCost'] ?? 0) as num)
+              .toDouble(),
+      fromName: (json['fromName'] ?? scooterCode) as String,
+      toName: (json['toName'] ?? json['status'] ?? '') as String,
     );
   }
 
