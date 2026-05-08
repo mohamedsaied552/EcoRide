@@ -1,14 +1,16 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
+
 import '../core/storage/token_storage.dart';
 import '../models/auth_result.dart';
 import '../models/user.dart';
 import 'api_service.dart';
 
 class AuthService {
-  AuthService({
-    ApiService? apiService,
-    TokenStorage? tokenStorage,
-  }) : _apiService = apiService ?? ApiService(),
-       _tokenStorage = tokenStorage ?? TokenStorage();
+  AuthService({ApiService? apiService, TokenStorage? tokenStorage})
+    : _apiService = apiService ?? ApiService(),
+      _tokenStorage = tokenStorage ?? TokenStorage();
 
   final ApiService _apiService;
   final TokenStorage _tokenStorage;
@@ -19,10 +21,7 @@ class AuthService {
   }) async {
     final data = await _apiService.post(
       '/Auth/login',
-      data: <String, dynamic>{
-        'email': email,
-        'password': password,
-      },
+      data: <String, dynamic>{'email': email, 'password': password},
     );
 
     final result = AuthResult.fromJson(data);
@@ -38,17 +37,29 @@ class AuthService {
     required String email,
     required String phoneNumber,
     required String password,
-    required String idPhotoUrl,
+    required Uint8List idFrontPhotoBytes,
+    required Uint8List idBackPhotoBytes,
   }) async {
-    final data = await _apiService.post(
+    final formData = FormData.fromMap(<String, dynamic>{
+      'fullName': fullName,
+      'email': email,
+      'phoneNumber': phoneNumber,
+      'password': password,
+      'IdFrontPhoto': MultipartFile.fromBytes(
+        idFrontPhotoBytes,
+        filename: 'id_front.jpg',
+        contentType: DioMediaType.parse('image/jpeg'),
+      ),
+      'IdBackPhoto': MultipartFile.fromBytes(
+        idBackPhotoBytes,
+        filename: 'id_back.jpg',
+        contentType: DioMediaType.parse('image/jpeg'),
+      ),
+    });
+
+    final data = await _apiService.multipartPost(
       '/Auth/register',
-      data: <String, dynamic>{
-        'fullName': fullName,
-        'email': email,
-        'phoneNumber': phoneNumber,
-        'password': password,
-        'idPhotoUrl': idPhotoUrl,
-      },
+      data: formData,
     );
 
     final result = AuthResult.fromJson(data);
