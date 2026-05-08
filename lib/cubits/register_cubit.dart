@@ -94,7 +94,9 @@ class RegisterState {
       isConfirmPasswordObscured:
           isConfirmPasswordObscured ?? this.isConfirmPasswordObscured,
       submissionStatus: submissionStatus ?? this.submissionStatus,
-      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+      errorMessage: clearErrorMessage
+          ? null
+          : (errorMessage ?? this.errorMessage),
       imageError: clearImageError ? null : (imageError ?? this.imageError),
       createdUser: createdUser ?? this.createdUser,
     );
@@ -232,14 +234,13 @@ class RegisterCubit extends Cubit<RegisterState> {
     );
 
     try {
-      final frontPayload = base64Encode(state.frontIdBytes!);
       final createdUser = await _backendService.signup(
         fullName: state.fullName.trim(),
         email: state.email.trim(),
         phoneNumber: state.phoneNumber.trim(),
         password: state.password,
-        idFrontPhotoUrl: 'data:image/jpeg;base64,$frontPayload',
-        idBackPhotoUrl: '',
+        idFrontPhotoBytes: state.frontIdBytes!,
+        idBackPhotoBytes: state.backIdBytes!,
       );
       emit(
         state.copyWith(

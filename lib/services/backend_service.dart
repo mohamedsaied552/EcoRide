@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../core/constants/app_constants.dart';
 import '../core/errors/api_exception.dart';
 import '../models/ride.dart';
@@ -44,19 +46,16 @@ class BackendService {
     required String email,
     required String phoneNumber,
     required String password,
-    required String idFrontPhotoUrl,
-    required String idBackPhotoUrl,
+    required Uint8List idFrontPhotoBytes,
+    required Uint8List idBackPhotoBytes,
   }) async {
-    final idPhotoUrl = idFrontPhotoUrl.isNotEmpty
-        ? idFrontPhotoUrl
-        : idBackPhotoUrl;
-
     final user = await _authService.register(
       fullName: fullName,
       email: email,
       phoneNumber: phoneNumber,
       password: password,
-      idPhotoUrl: idPhotoUrl,
+      idFrontPhotoBytes: idFrontPhotoBytes,
+      idBackPhotoBytes: idBackPhotoBytes,
     );
     _currentUser = user;
     return user;
@@ -116,9 +115,7 @@ class BackendService {
       avatarUrl: avatarUrl,
     );
 
-    _currentUser = user.copyWith(
-      email: _currentUser?.email ?? email,
-    );
+    _currentUser = user.copyWith(email: _currentUser?.email ?? email);
     return _currentUser!;
   }
 
@@ -164,19 +161,14 @@ class BackendService {
     if (id == null) {
       await _apiService.post(
         '/Scooter',
-        data: <String, dynamic>{
-          'serialNumber': code,
-          'modelId': modelId,
-        },
+        data: <String, dynamic>{'serialNumber': code, 'modelId': modelId},
       );
       return fetchNearbyScooters();
     }
 
     await _apiService.put(
       '/Scooter/$id',
-      data: <String, dynamic>{
-        'status': isAvailable ? 'Available' : 'Offline',
-      },
+      data: <String, dynamic>{'status': isAvailable ? 'Available' : 'Offline'},
     );
 
     return fetchNearbyScooters();
@@ -262,7 +254,10 @@ class BackendService {
     _currentUser ??= await fetchCurrentUser();
 
     final updatedUser = _currentUser!.copyWith(
-      walletBalance: (_currentUser!.walletBalance - amount).clamp(0.0, 1000000.0),
+      walletBalance: (_currentUser!.walletBalance - amount).clamp(
+        0.0,
+        1000000.0,
+      ),
     );
     _currentUser = updatedUser;
     return updatedUser;

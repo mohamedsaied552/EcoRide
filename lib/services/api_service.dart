@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../core/network/dio_client.dart';
 
 class ApiService {
@@ -30,6 +32,19 @@ class ApiService {
   Future<Map<String, dynamic>> post(
     String path, {
     Map<String, dynamic>? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final response = await _dioClient.post(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> multipartPost(
+    String path, {
+    required FormData data,
     Map<String, dynamic>? queryParameters,
   }) async {
     final response = await _dioClient.post(
