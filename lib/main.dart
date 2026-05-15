@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'cubits/ride_cubit.dart';
-import 'cubits/user_cubit.dart';
-import 'cubits/wallet_cubit.dart';
-import 'screens/admin_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/map_screen.dart';
-import 'screens/onboarding_screen.dart';
-import 'screens/profile_screen.dart';
-import 'screens/ride_history_screen.dart';
-import 'screens/signup_screen.dart';
-import 'screens/splash_screen.dart';
-import 'screens/wallet_screen.dart';
+import 'package:glider/presentation/cubits/ride_cubit.dart';
+import 'package:glider/presentation/cubits/user_cubit.dart';
+import 'package:glider/presentation/cubits/wallet_cubit.dart';
+import 'package:glider/presentation/screens/admin_screen.dart';
+import 'package:glider/presentation/screens/login_screen.dart';
+import 'package:glider/presentation/screens/map_screen.dart';
+import 'package:glider/presentation/screens/onboarding_screen.dart';
+import 'package:glider/presentation/screens/profile_screen.dart';
+import 'package:glider/presentation/screens/ride_history_screen.dart';
+import 'package:glider/presentation/screens/signup_screen.dart';
+import 'package:glider/presentation/screens/splash_screen.dart';
+import 'package:glider/presentation/screens/wallet_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

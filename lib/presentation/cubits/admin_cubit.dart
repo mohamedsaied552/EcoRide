@@ -1,0 +1,260 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:glider/domain/entities/scooter.dart';
+import 'package:glider/domain/entities/user.dart';
+import '../../data/repositories/backend_service.dart';
+
+enum AdminStatus { initial, loading, success, saving, failure }
+
+class AdminState {
+  const AdminState({
+    this.status = AdminStatus.initial,
+    this.users = const [],
+    this.scooters = const [],
+    this.code = '',
+    this.modelId = '',
+    this.locationName = '',
+    this.lat = '',
+    this.lng = '',
+    this.batteryPercent = '100',
+    this.isAvailable = true,
+    this.editingScooterId,
+    this.errorMessage,
+    this.successMessage,
+  });
+
+  final AdminStatus status;
+  final List<AppUser> users;
+  final List<Scooter> scooters;
+  final String code;
+  final String modelId;
+  final String locationName;
+  final String lat;
+  final String lng;
+  final String batteryPercent;
+  final bool isAvailable;
+  final String? editingScooterId;
+  final String? errorMessage;
+  final String? successMessage;
+
+  bool get isEditing => editingScooterId != null;
+
+  AdminState copyWith({
+    AdminStatus? status,
+    List<AppUser>? users,
+    List<Scooter>? scooters,
+    String? code,
+    String? modelId,
+    String? locationName,
+    String? lat,
+    String? lng,
+    String? batteryPercent,
+    bool? isAvailable,
+    String? editingScooterId,
+    String? errorMessage,
+    String? successMessage,
+    bool clearEditing = false,
+    bool clearError = false,
+    bool clearSuccess = false,
+  }) {
+    return AdminState(
+      status: status ?? this.status,
+      users: users ?? this.users,
+      scooters: scooters ?? this.scooters,
+      code: code ?? this.code,
+      modelId: modelId ?? this.modelId,
+      locationName: locationName ?? this.locationName,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      batteryPercent: batteryPercent ?? this.batteryPercent,
+      isAvailable: isAvailable ?? this.isAvailable,
+      editingScooterId:
+          clearEditing ? null : (editingScooterId ?? this.editingScooterId),
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      successMessage:
+          clearSuccess ? null : (successMessage ?? this.successMessage),
+    );
+  }
+}
+
+class AdminCubit extends Cubit<AdminState> {
+  AdminCubit({BackendService? backendService})
+      : _backendService = backendService ?? BackendService(),
+        super(const AdminState());
+
+  final BackendService _backendService;
+
+  Future<void> load() async {
+    emit(
+      state.copyWith(
+        status: AdminStatus.loading,
+        clearError: true,
+        clearSuccess: true,
+      ),
+    );
+    try {
+      final users = await _backendService.fetchAdminUsers();
+      final scooters = await _backendService.fetchAdminScooters();
+      emit(
+        state.copyWith(
+          status: AdminStatus.success,
+          users: users,
+          scooters: scooters,
+          clearError: true,
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          status: AdminStatus.failure,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
+  void updateCode(String value) => emit(state.copyWith(code: value));
+
+  void updateModelId(String value) => emit(state.copyWith(modelId: value));
+
+  void updateLocationName(String value) =>
+      emit(state.copyWith(locationName: value));
+
+  void updateLat(String value) => emit(state.copyWith(lat: value));
+
+  void updateLng(String value) => emit(state.copyWith(lng: value));
+
+  void updateBatteryPercent(String value) =>
+      emit(state.copyWith(batteryPercent: value));
+
+  void updateAvailability(bool value) =>
+      emit(state.copyWith(isAvailable: value));
+
+  void startEditing(Scooter scooter) {
+    emit(
+      state.copyWith(
+        editingScooterId: scooter.id,
+        code: scooter.code,
+        modelId: scooter.modelName ?? '',
+        locationName: scooter.locationName,
+        lat: scooter.lat.toString(),
+        lng: scooter.lng.toString(),
+        batteryPercent: scooter.batteryPercent.toString(),
+        isAvailable: scooter.isAvailable,
+        clearError: true,
+        clearSuccess: true,
+      ),
+    );
+  }
+
+  void clearForm() {
+    emit(
+      state.copyWith(
+        code: '',
+        modelId: '',
+        locationName: '',
+        lat: '',
+        lng: '',
+        batteryPercent: '100',
+        isAvailable: true,
+        clearEditing: true,
+        clearError: true,
+        clearSuccess: true,
+      ),
+    );
+  }
+
+  Future<void> saveScooter() async {
+    final lat = double.tryParse(state.lat);
+    final lng = double.tryParse(state.lng);
+    final battery = int.tryParse(state.batteryPercent);
+
+    if (state.code.trim().isEmpty ||
+        state.modelId.trim().isEmpty ||
+        state.locationName.trim().isEmpty ||
+        lat == null ||
+        lng == null ||
+        battery == null) {
+      emit(
+        state.copyWith(
+          status: AdminStatus.failure,
+          errorMessage: 'Please fill all scooter fields with valid values.',
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        status: AdminStatus.saving,
+        clearError: true,
+        clearSuccess: true,
+      ),
+    );
+
+    try {
+      final scooters = await _backendService.saveAdminScooter(
+        id: state.editingScooterId,
+        code: state.code.trim(),
+        modelId: state.modelId.trim(),
+        locationName: state.locationName.trim(),
+        lat: lat,
+        lng: lng,
+        batteryPercent: battery,
+        isAvailable: state.isAvailable,
+      );
+      emit(
+        state.copyWith(
+          status: AdminStatus.success,
+          scooters: scooters,
+          successMessage:
+              state.isEditing ? 'Scooter updated.' : 'Scooter added.',
+          code: '',
+          modelId: '',
+          locationName: '',
+          lat: '',
+          lng: '',
+          batteryPercent: '100',
+          isAvailable: true,
+          clearEditing: true,
+          clearError: true,
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          status: AdminStatus.failure,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteScooter(String id) async {
+    emit(
+      state.copyWith(
+        status: AdminStatus.saving,
+        clearError: true,
+        clearSuccess: true,
+      ),
+    );
+    try {
+      final scooters = await _backendService.deleteAdminScooter(id);
+      emit(
+        state.copyWith(
+          status: AdminStatus.success,
+          scooters: scooters,
+          successMessage: 'Scooter deleted.',
+          clearError: true,
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          status: AdminStatus.failure,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+}
