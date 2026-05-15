@@ -83,13 +83,9 @@ class AuthService {
               accountStatus.contains('pending') ||
               accountStatus.contains('unverified');
 
-    if (tokenJson is Map && !requiresVerification) {
-      final token = AuthToken.fromJson(Map<String, dynamic>.from(tokenJson));
-      await _tokenStorage.saveTokens(
-        accessToken: token.accessToken,
-        refreshToken: token.refreshToken,
-      );
-    }
+    // Do not persist tokens as part of the registration flow. Token
+    // persistence and establishing an authenticated session should only
+    // happen after an explicit verification (verifyEmail) or login.
 
     return SignupResult(
       user: user,
