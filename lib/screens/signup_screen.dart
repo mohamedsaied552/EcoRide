@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +9,7 @@ import '../widgets/id_upload_card.dart';
 import '../widgets/register_progress_indicator.dart';
 import 'admin_screen.dart';
 import 'map_screen.dart';
+import 'verify_email_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -42,9 +44,33 @@ class _SignupScreenState extends State<SignupScreen> {
         listenWhen: (previous, current) =>
             previous.submissionStatus != current.submissionStatus,
         listener: (context, state) {
+          if (state.submissionStatus ==
+                  RegisterSubmissionStatus.awaitingVerification &&
+              state.createdUser != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Account created. Please verify your email to continue.',
+                ),
+                backgroundColor: Color(0xFF1FAE6C),
+              ),
+            );
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    VerifyEmailScreen(email: state.createdUser!.email),
+              ),
+              (route) => false,
+            );
+            return;
+          }
+
           if (state.submissionStatus == RegisterSubmissionStatus.success &&
               state.createdUser != null) {
-            context.read<UserCubit>().applyAuthenticatedUser(state.createdUser!);
+            context.read<UserCubit>().applyAuthenticatedUser(
+              state.createdUser!,
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Account created successfully'),
@@ -54,8 +80,9 @@ class _SignupScreenState extends State<SignupScreen> {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    state.createdUser!.isAdmin ? const AdminScreen() : const MapScreen(),
+                builder: (_) => state.createdUser!.isAdmin
+                    ? const AdminScreen()
+                    : const MapScreen(),
               ),
               (route) => false,
             );
@@ -93,9 +120,9 @@ class _SignupScreenState extends State<SignupScreen> {
                         state.currentStep == RegisterStep.details
                             ? 'Create your rider profile'
                             : 'Upload both sides of your ID',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontSize: 28,
-                            ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.headlineSmall?.copyWith(fontSize: 28),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -106,8 +133,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                       const SizedBox(height: 20),
                       RegisterProgressIndicator(
-                        currentStep:
-                            state.currentStep == RegisterStep.details ? 1 : 2,
+                        currentStep: state.currentStep == RegisterStep.details
+                            ? 1
+                            : 2,
                       ),
                       const SizedBox(height: 28),
                       AnimatedSwitcher(
@@ -133,7 +161,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         SizedBox(
                           height: 54,
                           child: ElevatedButton(
-                            onPressed: state.submissionStatus ==
+                            onPressed:
+                                state.submissionStatus ==
                                     RegisterSubmissionStatus.loading
                                 ? null
                                 : () {
@@ -159,7 +188,8 @@ class _SignupScreenState extends State<SignupScreen> {
                               child: SizedBox(
                                 height: 54,
                                 child: OutlinedButton(
-                                  onPressed: state.submissionStatus ==
+                                  onPressed:
+                                      state.submissionStatus ==
                                           RegisterSubmissionStatus.loading
                                       ? null
                                       : cubit.goBackToDetails,
@@ -173,12 +203,14 @@ class _SignupScreenState extends State<SignupScreen> {
                               child: SizedBox(
                                 height: 54,
                                 child: ElevatedButton(
-                                  onPressed: state.submissionStatus ==
+                                  onPressed:
+                                      state.submissionStatus ==
                                           RegisterSubmissionStatus.loading
                                       ? null
                                       : cubit.submitRegistration,
                                   style: _primaryButtonStyle(),
-                                  child: state.submissionStatus ==
+                                  child:
+                                      state.submissionStatus ==
                                           RegisterSubmissionStatus.loading
                                       ? const SizedBox(
                                           height: 22,
@@ -187,8 +219,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                             strokeWidth: 2.5,
                                             valueColor:
                                                 AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
+                                                  Colors.white,
+                                                ),
                                           ),
                                         )
                                       : const Text(
@@ -207,9 +239,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       Text(
                         'By signing up, you agree to our Terms of Service and Privacy Policy.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 12,
-                              color: const Color(0xFF667085),
-                            ),
+                          fontSize: 12,
+                          color: const Color(0xFF667085),
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20),
@@ -405,10 +437,7 @@ class _DetailsStep extends StatelessWidget {
 }
 
 class _IdStep extends StatelessWidget {
-  const _IdStep({
-    required this.state,
-    super.key,
-  });
+  const _IdStep({required this.state, super.key});
 
   final RegisterState state;
 
@@ -431,10 +460,7 @@ class _IdStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        Text(
-          'Front side',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Front side', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 10),
         IdUploadCard(
           imageBytes: state.frontIdBytes,
@@ -453,10 +479,7 @@ class _IdStep extends StatelessWidget {
           onClear: () => cubit.clearSelectedIdImage(RegisterImageSide.front),
         ),
         const SizedBox(height: 20),
-        Text(
-          'Back side',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Back side', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 10),
         IdUploadCard(
           imageBytes: state.backIdBytes,
@@ -518,7 +541,10 @@ class _RegistrationField extends StatelessWidget {
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide.none,
@@ -537,3 +563,4 @@ class _RegistrationField extends StatelessWidget {
     );
   }
 }
+
