@@ -4,6 +4,7 @@ import '../core/constants/app_constants.dart';
 import '../core/errors/api_exception.dart';
 import '../models/ride.dart';
 import '../models/scooter.dart';
+import '../models/signup_result.dart';
 import '../models/user.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
@@ -41,7 +42,7 @@ class BackendService {
     return user;
   }
 
-  Future<AppUser> signup({
+  Future<SignupResult> signup({
     required String fullName,
     required String email,
     required String phoneNumber,
@@ -49,7 +50,7 @@ class BackendService {
     required Uint8List idFrontPhotoBytes,
     required Uint8List idBackPhotoBytes,
   }) async {
-    final user = await _authService.register(
+    final result = await _authService.register(
       fullName: fullName,
       email: email,
       phoneNumber: phoneNumber,
@@ -57,25 +58,27 @@ class BackendService {
       idFrontPhotoBytes: idFrontPhotoBytes,
       idBackPhotoBytes: idBackPhotoBytes,
     );
+    if (!result.requiresEmailVerification) {
+      _currentUser = result.user;
+    }
+    return result;
+  }
+
+  Future<AppUser> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    final verifiedUser = await _authService.verifyEmail(
+      email: email,
+      code: code,
+    );
+    final user = verifiedUser ?? await _authService.getProfile();
     _currentUser = user;
     return user;
   }
 
-  Future<void> verifyEmail({
-    required String email,
-    required String code,
-  }) async {
-    await _apiService.post(
-      '/Auth/verify-email',
-      data: <String, dynamic>{'email': email, 'code': code},
-    );
-  }
-
-  Future<void> resendOtp(String email) async {
-    await _apiService.post(
-      '/Auth/resend-otp',
-      data: <String, dynamic>{'email': email},
-    );
+  Future<void> resendOtp(String email) {
+    return _authService.resendVerificationCode(email);
   }
 
   Future<void> forgotPassword(String email) {

@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -10,7 +11,13 @@ import '../services/image_picker_service.dart';
 
 enum RegisterStep { details, idScan }
 
-enum RegisterSubmissionStatus { idle, loading, success, failure }
+enum RegisterSubmissionStatus {
+  idle,
+  loading,
+  success,
+  awaitingVerification,
+  failure,
+}
 
 enum RegisterImageSide { front, back }
 
@@ -234,7 +241,7 @@ class RegisterCubit extends Cubit<RegisterState> {
     );
 
     try {
-      final createdUser = await _backendService.signup(
+      final signupResult = await _backendService.signup(
         fullName: state.fullName.trim(),
         email: state.email.trim(),
         phoneNumber: state.phoneNumber.trim(),
@@ -244,9 +251,10 @@ class RegisterCubit extends Cubit<RegisterState> {
       );
       emit(
         state.copyWith(
-          submissionStatus: RegisterSubmissionStatus.success,
-          createdUser: createdUser,
-          clearErrorMessage: true,
+          submissionStatus: signupResult.requiresEmailVerification
+              ? RegisterSubmissionStatus.awaitingVerification
+              : RegisterSubmissionStatus.success,
+          createdUser: signupResult.user,
         ),
       );
     } catch (error) {

@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 
 import '../core/storage/token_storage.dart';
 import '../models/auth_result.dart';
+import '../models/signup_result.dart';
+import '../models/token.dart';
 import '../models/user.dart';
 import 'api_service.dart';
 
@@ -32,7 +34,7 @@ class AuthService {
     return result.user;
   }
 
-  Future<AppUser> register({
+  Future<SignupResult> register({
     required String fullName,
     required String email,
     required String phoneNumber,
@@ -62,12 +64,69 @@ class AuthService {
       data: formData,
     );
 
-    final result = AuthResult.fromJson(data);
-    await _tokenStorage.saveTokens(
-      accessToken: result.token.accessToken,
-      refreshToken: result.token.refreshToken,
+    final tokenJson = data['token'];
+    final userJson = data['user'];
+
+    final user = userJson is Map
+        ? AppUser.fromJson(Map<String, dynamic>.from(userJson))
+        : AppUser.fromJson(data);
+
+    final explicitFlag = data['requiresEmailVerification'];
+    final emailVerifiedFlag = data['emailVerified'];
+    final accountStatus = (user.accountStatus ?? '').toLowerCase();
+
+    final requiresVerification = explicitFlag is bool
+        ? explicitFlag
+        : emailVerifiedFlag is bool
+        ? !emailVerifiedFlag
+        : tokenJson == null ||
+              accountStatus.contains('pending') ||
+              accountStatus.contains('unverified');
+
+    if (tokenJson is Map && !requiresVerification) {
+      final token = AuthToken.fromJson(Map<String, dynamic>.from(tokenJson));
+      await _tokenStorage.saveTokens(
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+      );
+    }
+
+    return SignupResult(
+      user: user,
+      requiresEmailVerification: requiresVerification,
     );
-    return result.user;
+  }
+
+  Future<AppUser?> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    final data = await _apiService.post(
+      '/Auth/verify-email',
+      data: <String, dynamic>{'email': email, 'code': code},
+    );
+
+    final tokenJson = data['token'];
+    if (tokenJson is Map) {
+      final token = AuthToken.fromJson(Map<String, dynamic>.from(tokenJson));
+      await _tokenStorage.saveTokens(
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+      );
+    }
+
+    final userJson = data['user'];
+    if (userJson is Map) {
+      return AppUser.fromJson(Map<String, dynamic>.from(userJson));
+    }
+    return null;
+  }
+
+  Future<void> resendVerificationCode(String email) async {
+    await _apiService.post(
+      '/Auth/resend-otp',
+      data: <String, dynamic>{'email': email},
+    );
   }
 
   Future<AppUser> getProfile() async {
