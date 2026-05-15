@@ -58,7 +58,12 @@ class BackendService {
       idFrontPhotoBytes: idFrontPhotoBytes,
       idBackPhotoBytes: idBackPhotoBytes,
     );
-    if (!result.requiresEmailVerification) {
+    // Only treat the user as logged-in if the backend registration flow
+    // actually resulted in a saved authentication session (tokens).
+    // This avoids auto-login when the server returns tokens during
+    // registration but the app still requires email/OTP verification.
+    final hasSession = await _authService.hasSavedSession();
+    if (!result.requiresEmailVerification && hasSession) {
       _currentUser = result.user;
     }
     return result;
