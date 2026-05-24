@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,7 +6,6 @@ import 'package:glider/presentation/cubits/register_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/widgets/id_upload_card.dart';
 import 'package:glider/presentation/widgets/register_progress_indicator.dart';
-import 'admin_screen.dart';
 import 'map_screen.dart';
 import 'verify_email_screen.dart';
 
@@ -79,11 +77,7 @@ class _SignupScreenState extends State<SignupScreen> {
             );
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(
-                builder: (_) => state.createdUser!.isAdmin
-                    ? const AdminScreen()
-                    : const MapScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const MapScreen()),
               (route) => false,
             );
           }
@@ -563,4 +557,3 @@ class _RegistrationField extends StatelessWidget {
     );
   }
 }
-

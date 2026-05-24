@@ -146,47 +146,6 @@ class BackendService {
     return _scooterApiService.getScooters();
   }
 
-  Future<List<AppUser>> fetchAdminUsers() async {
-    throw ApiException(
-      'No admin users endpoint is available in the current API specification.',
-    );
-  }
-
-  Future<List<Scooter>> fetchAdminScooters() {
-    return fetchNearbyScooters();
-  }
-
-  Future<List<Scooter>> saveAdminScooter({
-    String? id,
-    required String code,
-    required String modelId,
-    required String locationName,
-    required double lat,
-    required double lng,
-    required int batteryPercent,
-    required bool isAvailable,
-  }) async {
-    if (id == null) {
-      await _apiService.post(
-        '/Scooter',
-        data: <String, dynamic>{'serialNumber': code, 'modelId': modelId},
-      );
-      return fetchNearbyScooters();
-    }
-
-    await _apiService.put(
-      '/Scooter/$id',
-      data: <String, dynamic>{'status': isAvailable ? 'Available' : 'Offline'},
-    );
-
-    return fetchNearbyScooters();
-  }
-
-  Future<List<Scooter>> deleteAdminScooter(String id) async {
-    await _apiService.delete('/Scooter/$id');
-    return fetchNearbyScooters();
-  }
-
   Future<List<Ride>> fetchRideHistory() async {
     return List<Ride>.unmodifiable(_rides);
   }

@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:glider/presentation/cubits/login_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import '../../data/repositories/backend_service.dart';
-import 'admin_screen.dart';
 import 'map_screen.dart';
 import 'signup_screen.dart';
 
@@ -56,18 +55,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
     loginCubit.setIdle();
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          user.isAdmin ? 'Admin login successful' : 'Login successful',
-        ),
-        backgroundColor: const Color(0xFF1FAE6C),
+      const SnackBar(
+        content: Text('Login successful'),
+        backgroundColor: Color(0xFF1FAE6C),
       ),
     );
 
     navigator.pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => user.isAdmin ? const AdminScreen() : const MapScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const MapScreen()),
       (route) => false,
     );
   }
