@@ -1,11 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/cubits/verify_email_cubit.dart';
-import 'admin_screen.dart';
 import 'map_screen.dart';
 
 class VerifyEmailScreen extends StatelessWidget {
@@ -56,10 +54,7 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
             ),
           );
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (_) =>
-                  user.isAdmin ? const AdminScreen() : const MapScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const MapScreen()),
             (route) => false,
           );
         } else if (state.status == VerifyEmailStatus.failure &&
@@ -133,7 +128,8 @@ class _VerifyEmailViewState extends State<_VerifyEmailView> {
                       enabled: !isVerifying,
                       onChanged: cubit.updateCode,
                       onSubmitted: (_) => cubit.submit(),
-                      hasError: state.errorType == VerifyEmailError.invalidCode ||
+                      hasError:
+                          state.errorType == VerifyEmailError.invalidCode ||
                           state.errorType == VerifyEmailError.expiredCode,
                     ),
                     if (state.errorMessage != null &&
@@ -315,4 +311,3 @@ class _ResendRow extends StatelessWidget {
     );
   }
 }
-

@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/cubits/wallet_cubit.dart';
-import 'package:glider/presentation/screens/admin_screen.dart';
 import 'package:glider/presentation/screens/login_screen.dart';
 import 'package:glider/presentation/screens/map_screen.dart';
 import 'package:glider/presentation/screens/onboarding_screen.dart';
@@ -84,7 +83,6 @@ class ScooterApp extends StatelessWidget {
         '/profile': (_) => const ProfileScreen(),
         '/history': (_) => const RideHistoryScreen(),
         '/wallet': (_) => const WalletScreen(),
-        '/admin': (_) => const AdminScreen(),
       },
     );
   }
