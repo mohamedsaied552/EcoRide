@@ -1,74 +1,341 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/data/services/ride_service.dart';
+import 'package:glider/presentation/cubits/ride_cubit.dart';
+import 'package:glider/presentation/screens/ride_screen.dart';
+import 'package:glider/presentation/screens/topup_screen.dart';
 import 'package:glider/presentation/widgets/qr_view.dart';
-import 'ride_screen.dart';
 
-class QRScanScreen extends StatelessWidget {
+class QRScanScreen extends StatefulWidget {
   const QRScanScreen({super.key});
 
-  Future<void> _handleScan(BuildContext context, String? code) async {
-    if (!context.mounted) return;
-    if (code == null || code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid QR code')),
-      );
-      return;
-    }
+  @override
+  State<QRScanScreen> createState() => _QRScanScreenState();
+}
 
-    final rideService = RideService();
-    try {
-      await rideService.startRide(code.trim());
-      if (!context.mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const RideScreen()),
-      );
-    } on StateError catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to start ride. Please try again.')),
-      );
-    }
-  }
+class _QRScanScreenState extends State<QRScanScreen> {
+  bool _isSheetVisible = false;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Scan QR")),
-      body: Stack(
-        children: [
-          QrViewWidget(
-            onScan: (code) => _handleScan(context, code),
-          ),
-          Positioned(
-            left: 24,
-            right: 24,
-            bottom: 30,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const Icon(Icons.qr_code),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "Align the QR code within the frame to unlock and start your ride.",
-                        style: Theme.of(context).textTheme.bodyMedium,
+    return BlocListener<RideCubit, RideState>(
+      listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+      listener: (context, state) async {
+        if (state is RideFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
+
+        if (state is RideInProgress) {
+          if (_isSheetVisible && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+            _isSheetVisible = false;
+          }
+          context.read<RideCubit>().reset();
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const RideScreen()),
+          );
+          return;
+        }
+
+        if (state is ScooterLoaded ||
+            state is InsufficientFunds ||
+            state is ProximityFailure ||
+            state is ProximityChecking ||
+            state is RideStarting) {
+          _presentRideSheet();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Scan QR')),
+        body: Stack(
+          children: [
+            QrViewWidget(
+              onScan: (code) {
+                if (code == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Invalid QR code')),
+                  );
+                  return;
+                }
+
+                final rideState = context.read<RideCubit>().state;
+                if (rideState is ScooterLoading || rideState is RideStarting) {
+                  return;
+                }
+
+                context.read<RideCubit>().scanScooter(code);
+              },
+            ),
+            BlocBuilder<RideCubit, RideState>(
+              builder: (context, state) {
+                if (state is! ScooterLoading) {
+                  return const SizedBox.shrink();
+                }
+
+                return const Positioned.fill(
+                  child: ColoredBox(
+                    color: Color(0x88000000),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 30,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.qr_code),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Scan the scooter QR to load its status, wallet check, and proximity confirmation.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                       ),
-                    )
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _presentRideSheet() async {
+    if (_isSheetVisible || !mounted) {
+      return;
+    }
+
+    _isSheetVisible = true;
+    await showModalBottomSheet<void>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      builder: (_) {
+        return BlocProvider.value(
+          value: context.read<RideCubit>(),
+          child: const _RidePreviewSheet(),
+        );
+      },
+    );
+    _isSheetVisible = false;
+  }
+}
+
+class _RidePreviewSheet extends StatelessWidget {
+  const _RidePreviewSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+        child: BlocBuilder<RideCubit, RideState>(
+          builder: (context, state) {
+            final preview = switch (state) {
+              ScooterLoaded(:final preview) => preview,
+              InsufficientFunds(:final preview) => preview,
+              ProximityFailure(:final preview) => preview,
+              ProximityChecking(:final preview) => preview,
+              RideStarting(:final preview) => preview,
+              RideInProgress(:final preview) => preview,
+              RideFailure(:final preview?) => preview,
+              _ => null,
+            };
+
+            if (preview == null) {
+              return const SizedBox.shrink();
+            }
+
+            final rideCubit = context.read<RideCubit>();
+            final isBusy = state is ProximityChecking || state is RideStarting;
+            final hasFunds = preview.hasSufficientBalance;
+            final withinRange = preview.isWithinUnlockRadius;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD0D5DD),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        'assets/scooter.png',
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            preview.scooter.code,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            preview.scooter.modelName ?? preview.scooter.locationName,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${preview.scooter.batteryPercent}% battery',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _InfoRow(
+                  label: 'Status',
+                  value: preview.scooter.statusLabel,
+                ),
+                _InfoRow(
+                  label: 'Wallet',
+                  value:
+                      '${preview.user.walletBalance.toStringAsFixed(0)} EGP / ${preview.minimumRequiredBalance.toStringAsFixed(0)} EGP min',
+                ),
+                _InfoRow(
+                  label: 'Distance',
+                  value: preview.distanceToScooterMeters == null
+                      ? 'Not checked yet'
+                      : '${preview.distanceToScooterMeters!.toStringAsFixed(1)} m / ${preview.allowedUnlockRadiusMeters.toStringAsFixed(0)} m',
+                ),
+                if (state is InsufficientFunds) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Your balance is below the minimum required to unlock this scooter.',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ],
+                if (state is ProximityFailure) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Move closer to the scooter and try the proximity check again.',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                if (!hasFunds)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const TopUpScreen()),
+                        );
+                        if (context.mounted) {
+                          await rideCubit.refreshRidePreview();
+                        }
+                      },
+                      child: const Text('Add Money'),
+                    ),
+                  )
+                else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: isBusy
+                          ? null
+                          : withinRange
+                              ? rideCubit.startRide
+                              : rideCubit.refreshRidePreview,
+                      child: isBusy
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(withinRange ? 'Start Ride' : 'Check Distance'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: isBusy ? null : rideCubit.refreshRidePreview,
+                      child: const Text('Refresh status'),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: TextButton(
+                    onPressed: isBusy
+                        ? null
+                        : () {
+                            rideCubit.reset();
+                            Navigator.of(context).pop();
+                          },
+                    child: const Text('Scan another scooter'),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );

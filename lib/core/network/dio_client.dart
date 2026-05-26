@@ -12,8 +12,9 @@ class DioClient {
         BaseOptions(
           baseUrl: AppConstants.baseUrl,
           connectTimeout: const Duration(seconds: 20),
-          receiveTimeout: const Duration(seconds: 60),
-          sendTimeout: const Duration(seconds: 60),
+          // Increase receive/send timeouts to accommodate large file uploads
+          receiveTimeout: const Duration(minutes: 3),
+          sendTimeout: const Duration(minutes: 3),
           headers: <String, dynamic>{
             'Accept': 'application/json',
             'Content-Type': 'application/json',
