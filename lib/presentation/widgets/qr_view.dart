@@ -1,34 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-typedef OnScan = Function(String code);
+typedef OnScan = void Function(String? code);
 
-class QrViewWidget extends StatelessWidget {
+class QrViewWidget extends StatefulWidget {
+  const QrViewWidget({
+    super.key,
+    required this.onScan,
+  });
+
   final OnScan onScan;
 
-  const QrViewWidget({super.key, required this.onScan});
+  @override
+  State<QrViewWidget> createState() => _QrViewWidgetState();
+}
+
+class _QrViewWidgetState extends State<QrViewWidget> {
+  bool _isLocked = false;
 
   @override
   Widget build(BuildContext context) {
-    bool isScanned = false;
+    return MobileScanner(
+      onDetect: (capture) {
+        if (_isLocked || capture.barcodes.isEmpty) {
+          return;
+        }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Scan QR")),
-      body: MobileScanner(
-        onDetect: (capture) {
-          if (isScanned) return;
+        final code = capture.barcodes.first.rawValue;
+        if (code == null || code.trim().isEmpty) {
+          return;
+        }
 
-          final String? code = capture.barcodes.isNotEmpty ? capture.barcodes.first.rawValue : null;
+        _isLocked = true;
+        widget.onScan(code);
 
-          if (code != null) {
-            isScanned = true;
-
-            onScan(code);
-
-            Navigator.pop(context);
+        Future<void>.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() => _isLocked = false);
           }
-        },
-      ),
+        });
+      },
     );
   }
 }

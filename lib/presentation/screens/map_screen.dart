@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:glider/config/app_config.dart';
 import 'package:glider/presentation/cubits/map_cubit.dart';
+import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/domain/entities/scooter.dart';
 import 'package:glider/presentation/widgets/app_user_drawer.dart';
@@ -149,6 +150,7 @@ class MapScreen extends StatelessWidget {
                                   icon: const Icon(Icons.qr_code),
                                   label: const Text('Scan to unlock'),
                                   onPressed: () {
+                                    context.read<RideCubit>().reset();
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(

@@ -1,20 +1,405 @@
+import 'dart:convert';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 
-class RideState {
-  final bool isRiding;
-  final String? scooterId;
+import 'package:glider/data/repositories/backend_service.dart';
+import 'package:glider/data/services/ride_service.dart';
+import 'package:glider/domain/entities/ride.dart';
+import 'package:glider/domain/entities/scooter.dart';
+import 'package:glider/domain/entities/user.dart';
 
-  RideState({required this.isRiding, this.scooterId});
+class RidePreview {
+  const RidePreview({
+    required this.serialNumber,
+    required this.scooter,
+    required this.user,
+    required this.minimumRequiredBalance,
+    required this.allowedUnlockRadiusMeters,
+    this.distanceToScooterMeters,
+  });
+
+  final String serialNumber;
+  final Scooter scooter;
+  final AppUser user;
+  final double minimumRequiredBalance;
+  final double allowedUnlockRadiusMeters;
+  final double? distanceToScooterMeters;
+
+  bool get hasSufficientBalance => user.walletBalance >= minimumRequiredBalance;
+
+  bool get isWithinUnlockRadius =>
+      distanceToScooterMeters != null &&
+      distanceToScooterMeters! <= allowedUnlockRadiusMeters;
+
+  RidePreview copyWith({
+    String? serialNumber,
+    Scooter? scooter,
+    AppUser? user,
+    double? minimumRequiredBalance,
+    double? allowedUnlockRadiusMeters,
+    double? distanceToScooterMeters,
+    bool clearDistance = false,
+  }) {
+    return RidePreview(
+      serialNumber: serialNumber ?? this.serialNumber,
+      scooter: scooter ?? this.scooter,
+      user: user ?? this.user,
+      minimumRequiredBalance:
+          minimumRequiredBalance ?? this.minimumRequiredBalance,
+      allowedUnlockRadiusMeters:
+          allowedUnlockRadiusMeters ?? this.allowedUnlockRadiusMeters,
+      distanceToScooterMeters: clearDistance
+          ? null
+          : (distanceToScooterMeters ?? this.distanceToScooterMeters),
+    );
+  }
+}
+
+abstract class RideState {
+  const RideState();
+}
+
+class RideInitial extends RideState {
+  const RideInitial();
+}
+
+class ScooterLoading extends RideState {
+  const ScooterLoading({required this.serialNumber});
+
+  final String serialNumber;
+}
+
+class ScooterLoaded extends RideState {
+  const ScooterLoaded({required this.preview});
+
+  final RidePreview preview;
+}
+
+class InsufficientFunds extends RideState {
+  const InsufficientFunds({required this.preview});
+
+  final RidePreview preview;
+}
+
+class ProximityChecking extends RideState {
+  const ProximityChecking({required this.preview});
+
+  final RidePreview preview;
+}
+
+class ProximityFailure extends RideState {
+  const ProximityFailure({required this.preview});
+
+  final RidePreview preview;
+}
+
+class RideStarting extends RideState {
+  const RideStarting({required this.preview});
+
+  final RidePreview preview;
+}
+
+class RideInProgress extends RideState {
+  const RideInProgress({
+    required this.preview,
+    required this.ride,
+  });
+
+  final RidePreview preview;
+  final Ride ride;
+}
+
+class RideFailure extends RideState {
+  const RideFailure({
+    required this.message,
+    this.serialNumber,
+    this.preview,
+  });
+
+  final String message;
+  final String? serialNumber;
+  final RidePreview? preview;
 }
 
 class RideCubit extends Cubit<RideState> {
-  RideCubit() : super(RideState(isRiding: false));
+  RideCubit({
+    BackendService? backendService,
+    RideService? rideService,
+  }) : _backendService = backendService ?? BackendService(),
+       _rideService = rideService ?? RideService(),
+       super(const RideInitial());
 
-  void startRide(String id) {
-    emit(RideState(isRiding: true, scooterId: id));
+  final BackendService _backendService;
+  final RideService _rideService;
+
+  static const double minimumWalletBalance = 10.0;
+  static const double unlockRadiusMeters = 35.0;
+
+  Future<void> scanScooter(String rawCode) async {
+    final serialNumber = _extractSerialNumber(rawCode);
+    if (serialNumber == null || serialNumber.isEmpty) {
+      emit(
+        const RideFailure(
+          message: 'Unable to read this QR code. Please scan a Glider scooter QR.',
+        ),
+      );
+      return;
+    }
+
+    emit(ScooterLoading(serialNumber: serialNumber));
+
+    try {
+      final user = _backendService.currentUser ?? await _backendService.fetchCurrentUser();
+      final scooters = await _backendService.fetchNearbyScooters();
+      final scooter = scooters.where((item) {
+        final candidate = item.code.trim().toLowerCase();
+        return candidate == serialNumber.toLowerCase();
+      }).firstOrNull;
+
+      if (scooter == null) {
+        emit(
+          RideFailure(
+            message: 'Scooter $serialNumber was not found.',
+            serialNumber: serialNumber,
+          ),
+        );
+        return;
+      }
+
+      if (!scooter.isAvailable) {
+        emit(
+          RideFailure(
+            message: 'This scooter is currently ${scooter.statusLabel.toLowerCase()}.',
+            serialNumber: serialNumber,
+          ),
+        );
+        return;
+      }
+
+      final preview = RidePreview(
+        serialNumber: serialNumber,
+        scooter: scooter,
+        user: user,
+        minimumRequiredBalance: minimumWalletBalance,
+        allowedUnlockRadiusMeters: unlockRadiusMeters,
+      );
+
+      if (!preview.hasSufficientBalance) {
+        emit(InsufficientFunds(preview: preview));
+        return;
+      }
+
+      await validateProximity(preview: preview);
+    } catch (error) {
+      emit(
+        RideFailure(
+          message: error.toString(),
+          serialNumber: serialNumber,
+        ),
+      );
+    }
   }
 
-  void stopRide() {
-    emit(RideState(isRiding: false));
+  Future<void> refreshRidePreview() async {
+    final preview = _previewFromState();
+    if (preview == null) {
+      emit(const RideInitial());
+      return;
+    }
+
+    try {
+      final refreshedUser = await _backendService.fetchCurrentUser();
+      final refreshedPreview = preview.copyWith(user: refreshedUser);
+      if (!refreshedPreview.hasSufficientBalance) {
+        emit(InsufficientFunds(preview: refreshedPreview));
+        return;
+      }
+
+      await validateProximity(preview: refreshedPreview);
+    } catch (error) {
+      emit(
+        RideFailure(
+          message: error.toString(),
+          serialNumber: preview.serialNumber,
+          preview: preview,
+        ),
+      );
+    }
+  }
+
+  Future<void> validateProximity({RidePreview? preview}) async {
+    final activePreview = preview ?? _previewFromState();
+    if (activePreview == null) {
+      emit(const RideInitial());
+      return;
+    }
+
+    emit(ProximityChecking(preview: activePreview));
+
+    try {
+      final position = await _resolveCurrentPosition();
+      final distance = calculateDistanceMeters(
+        userLatitude: position.latitude,
+        userLongitude: position.longitude,
+        scooterLatitude: activePreview.scooter.lat,
+        scooterLongitude: activePreview.scooter.lng,
+      );
+
+      final updatedPreview = activePreview.copyWith(
+        distanceToScooterMeters: distance,
+      );
+
+      if (!updatedPreview.isWithinUnlockRadius) {
+        emit(ProximityFailure(preview: updatedPreview));
+        return;
+      }
+
+      emit(ScooterLoaded(preview: updatedPreview));
+    } catch (error) {
+      emit(
+        RideFailure(
+          message: error.toString(),
+          serialNumber: activePreview.serialNumber,
+          preview: activePreview,
+        ),
+      );
+    }
+  }
+
+  Future<void> startRide() async {
+    final preview = _previewFromState();
+    if (preview == null) {
+      emit(
+        const RideFailure(
+          message: 'Scan a scooter first before starting a ride.',
+        ),
+      );
+      return;
+    }
+
+    if (!preview.hasSufficientBalance) {
+      emit(InsufficientFunds(preview: preview));
+      return;
+    }
+
+    emit(RideStarting(preview: preview));
+
+    try {
+      final position = await _resolveCurrentPosition();
+      final distance = calculateDistanceMeters(
+        userLatitude: position.latitude,
+        userLongitude: position.longitude,
+        scooterLatitude: preview.scooter.lat,
+        scooterLongitude: preview.scooter.lng,
+      );
+      final verifiedPreview = preview.copyWith(distanceToScooterMeters: distance);
+
+      if (!verifiedPreview.isWithinUnlockRadius) {
+        emit(ProximityFailure(preview: verifiedPreview));
+        return;
+      }
+
+      final ride = await _rideService.startRide(
+        preview.serialNumber,
+        userLatitude: position.latitude,
+        userLongitude: position.longitude,
+      );
+      emit(RideInProgress(preview: verifiedPreview, ride: ride));
+    } catch (error) {
+      emit(
+        RideFailure(
+          message: error.toString(),
+          serialNumber: preview.serialNumber,
+          preview: preview,
+        ),
+      );
+    }
+  }
+
+  void reset() {
+    emit(const RideInitial());
+  }
+
+  double calculateDistanceMeters({
+    required double userLatitude,
+    required double userLongitude,
+    required double scooterLatitude,
+    required double scooterLongitude,
+  }) {
+    return Geolocator.distanceBetween(
+      userLatitude,
+      userLongitude,
+      scooterLatitude,
+      scooterLongitude,
+    );
+  }
+
+  RidePreview? _previewFromState() {
+    final current = state;
+    if (current is ScooterLoaded) return current.preview;
+    if (current is InsufficientFunds) return current.preview;
+    if (current is ProximityChecking) return current.preview;
+    if (current is ProximityFailure) return current.preview;
+    if (current is RideStarting) return current.preview;
+    if (current is RideInProgress) return current.preview;
+    if (current is RideFailure) return current.preview;
+    return null;
+  }
+
+  String? _extractSerialNumber(String rawCode) {
+    final trimmed = rawCode.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final uri = Uri.tryParse(trimmed);
+    final querySerial =
+        uri?.queryParameters['serialNumber'] ??
+        uri?.queryParameters['serial'] ??
+        uri?.queryParameters['code'];
+    if (querySerial != null && querySerial.trim().isNotEmpty) {
+      return querySerial.trim();
+    }
+
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map<String, dynamic>) {
+        final jsonSerial =
+            decoded['serialNumber'] ?? decoded['serial'] ?? decoded['code'];
+        if (jsonSerial is String && jsonSerial.trim().isNotEmpty) {
+          return jsonSerial.trim();
+        }
+      }
+    } catch (_) {
+      // Fall back to plain-text parsing below.
+    }
+
+    final parts = trimmed.split(RegExp(r'[:|/\s]'));
+    final candidate = parts.isNotEmpty ? parts.last.trim() : trimmed;
+    return candidate.isEmpty ? trimmed : candidate;
+  }
+
+  Future<Position> _resolveCurrentPosition() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Location services are disabled. Please enable GPS.');
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      throw Exception('Location permission is required to unlock a scooter.');
+    }
+
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
+    );
   }
 }

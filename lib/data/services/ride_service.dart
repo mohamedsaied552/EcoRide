@@ -106,7 +106,11 @@ class RideService {
 
   List<LatLng> get route => List<LatLng>.unmodifiable(_route);
 
-  Future<Ride> startRide(String scooterCode) async {
+  Future<Ride> startRide(
+    String scooterCode, {
+    required double userLatitude,
+    required double userLongitude,
+  }) async {
     if (_currentRide != null) {
       return _currentRide!;
     }
@@ -132,8 +136,8 @@ class RideService {
     final initialPosition = LatLng(scooter.lat, scooter.lng);
     final ride = await _backend.startRide(
       serialNumber: scooter.code,
-      userLatitude: initialPosition.latitude,
-      userLongitude: initialPosition.longitude,
+      userLatitude: userLatitude,
+      userLongitude: userLongitude,
     );
 
     await _scooterService.unlockScooter(scooter.id);
