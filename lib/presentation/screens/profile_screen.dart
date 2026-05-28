@@ -171,27 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       return null;
                                     },
                                   ),
-                                  const SizedBox(height: 14),
-                                  _ProfileField(
-                                    controller: _emailController,
-                                    label: 'Email',
-                                    icon: Icons.email_outlined,
-                                    keyboardType: TextInputType.emailAddress,
-                                    onChanged: cubit.updateEmail,
-                                    validator: (value) {
-                                      final email = value?.trim() ?? '';
-                                      final pattern = RegExp(
-                                        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                                      );
-                                      if (email.isEmpty) {
-                                        return 'Please enter your email.';
-                                      }
-                                      if (!pattern.hasMatch(email)) {
-                                        return 'Please enter a valid email.';
-                                      }
-                                      return null;
-                                    },
-                                  ),
+                                  
                                   const SizedBox(height: 14),
                                   _ProfileField(
                                     controller: _phoneController,
