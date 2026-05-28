@@ -19,12 +19,13 @@ class _QRScanScreenState extends State<QRScanScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<RideCubit, RideState>(
-      listenWhen: (previous, current) => previous.runtimeType != current.runtimeType,
+      listenWhen: (previous, current) =>
+          previous.runtimeType != current.runtimeType,
       listener: (context, state) async {
         if (state is RideFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
         }
 
         if (state is RideInProgress) {
@@ -199,7 +200,8 @@ class _RidePreviewSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            preview.scooter.modelName ?? preview.scooter.locationName,
+                            preview.scooter.modelName ??
+                                preview.scooter.locationName,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 6),
@@ -213,10 +215,7 @@ class _RidePreviewSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                _InfoRow(
-                  label: 'Status',
-                  value: preview.scooter.statusLabel,
-                ),
+                _InfoRow(label: 'Status', value: preview.scooter.statusLabel),
                 _InfoRow(
                   label: 'Wallet',
                   value:
@@ -250,7 +249,9 @@ class _RidePreviewSheet extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () async {
                         await Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const TopUpScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const TopUpScreen(),
+                          ),
                         );
                         if (context.mounted) {
                           await rideCubit.refreshRidePreview();
@@ -267,8 +268,8 @@ class _RidePreviewSheet extends StatelessWidget {
                       onPressed: isBusy
                           ? null
                           : withinRange
-                              ? rideCubit.startRide
-                              : rideCubit.refreshRidePreview,
+                          ? rideCubit.startRide
+                          : rideCubit.refreshRidePreview,
                       child: isBusy
                           ? const SizedBox(
                               width: 20,
@@ -312,10 +313,7 @@ class _RidePreviewSheet extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -327,15 +325,9 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
           ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     );

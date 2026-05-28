@@ -1,17 +1,12 @@
-// ignore: unnecessary_import
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
 
-// --- Google Maps imports (kept for reference, replaced by OpenStreetMap) ---
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
-// --------------------------------------------------------------------------
 import 'package:get_it/get_it.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 
-import 'package:glider/config/app_config.dart';
 import 'package:glider/core/events/app_event_bus.dart';
 import 'package:glider/presentation/cubits/map_cubit.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
@@ -19,9 +14,7 @@ import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/domain/entities/scooter.dart';
 import 'package:glider/presentation/widgets/app_user_drawer.dart';
 import 'package:glider/presentation/widgets/loading_spinner.dart';
-// ignore: unused_import
-import 'package:glider/presentation/widgets/map_unavailable_card.dart';
-import 'package:geolocator/geolocator.dart';
+
 import 'qr_scan_screen.dart';
 import 'wallet_screen.dart';
 
@@ -96,8 +89,10 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+    final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       if (mounted) {
@@ -113,12 +108,39 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  void _zoomIn() {
+    // Access the current zoom and center through the 'camera' property
+    final currentZoom = _mapController.camera.zoom;
+    final newZoom = (currentZoom + 1.0).clamp(1.0, 18.0);
+
+    _mapController.move(_mapController.camera.center, newZoom);
+  }
+
+  void _zoomOut() {
+    final currentZoom = _mapController.camera.zoom;
+    final newZoom = (currentZoom - 1.0).clamp(1.0, 18.0);
+
+    _mapController.move(_mapController.camera.center, newZoom);
+  }
+
   @override
   void dispose() {
     _eventSubscription.cancel();
     _mapCubit.close();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _showScooterDetailsBottomSheet(BuildContext context, Scooter scooter) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext context) {
+        return _buildScooterDetailsSheet(context, scooter, _userPosition);
+      },
+    );
   }
 
   Color _zoneFillColor(String type) {
@@ -193,18 +215,7 @@ class _MapScreenState extends State<MapScreen> {
                       height: 50,
                       child: GestureDetector(
                         onTap: () {
-                          final priceLabel =
-                              scooter.unlockFee != null &&
-                                  scooter.feePerMinute != null
-                              ? ' • Unlock ${scooter.unlockFee!.toStringAsFixed(2)} + ${scooter.feePerMinute!.toStringAsFixed(2)}/min'
-                              : '';
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${scooter.code} • Battery: ${scooter.batteryPercent}%$priceLabel',
-                              ),
-                            ),
-                          );
+                          _showScooterDetailsBottomSheet(context, scooter);
                         },
                         child: const Icon(
                           Icons.location_on,
@@ -225,9 +236,7 @@ class _MapScreenState extends State<MapScreen> {
                     height: 25,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(
-                          alpha: 0.25,
-                        ), // الدائرة الشفافة الخارجية
+                        color: Colors.blue.withValues(alpha: 0.15), // الدائرة الشفافة الخارجية
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -260,11 +269,7 @@ class _MapScreenState extends State<MapScreen> {
                     )
                   : MapScreen._center;
 
-              final Widget mapWidget;
-              // ignore: unused_local_variable
-              final bool hasGoogleMapsApiKey = AppConfig.hasGoogleMapsApiKey;
-
-              mapWidget = FlutterMap(
+              final Widget mapWidget = FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter:
@@ -324,11 +329,28 @@ class _MapScreenState extends State<MapScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          // The "My location" button sits directly above the
-                          // bottom panel, so it tracks the panel's actual
-                          // height (which changes with 0-3 scooter rows /
-                          // failure / empty states) instead of using a fixed
-                          // pixel offset that would overlap the panel.
+                          FloatingActionButton(
+                            heroTag: 'zoom_in_btn',
+                            mini: true,
+                            backgroundColor: Colors.white,
+                            onPressed: _zoomIn,
+                            child: const Icon(
+                              Icons.add,
+                              color: Color(0xFF1FAE6C),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          FloatingActionButton(
+                            heroTag: 'zoom_out_btn',
+                            mini: true,
+                            backgroundColor: Colors.white,
+                            onPressed: _zoomOut,
+                            child: const Icon(
+                              Icons.remove,
+                              color: Color(0xFF1FAE6C),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           FloatingActionButton(
                             heroTag: 'my_location_btn',
                             mini: true,
@@ -344,52 +366,7 @@ class _MapScreenState extends State<MapScreen> {
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          'Available scooters',
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.titleMedium,
-                                        ),
-                                      ),
-                                      TextButton(
-                                        onPressed: () =>
-                                            context.read<MapCubit>().load(),
-                                        child: const Text('Refresh'),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  if (mapState.status == MapStatus.failure)
-                                    Text(
-                                      mapState.errorMessage ??
-                                          'Unable to load scooters.',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(color: Colors.red),
-                                    )
-                                  else if (availableScooters.isEmpty &&
-                                      mapState.status != MapStatus.loading)
-                                    Text(
-                                      'No scooters nearby. Try a different area.',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium,
-                                    )
-                                  else
-                                    ...availableScooters
-                                        .take(3)
-                                        .map(
-                                          (scooter) =>
-                                              _ScooterRow(scooter: scooter),
-                                        ),
-                                  const SizedBox(height: 8),
                                   SizedBox(
                                     width: double.infinity,
                                     height: 48,
@@ -426,10 +403,103 @@ class _MapScreenState extends State<MapScreen> {
   }
 }
 
+Widget _buildDetailRow({
+  required IconData icon,
+  required Color iconColor,
+  required String title,
+  required String value,
+}) {
+  return Row(
+    children: [
+      Icon(icon, color: iconColor, size: 28),
+      const SizedBox(width: 16),
+      Text(title, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+      const Spacer(),
+      Text(
+        value,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+    ],
+  );
+}
+
+Widget _buildScooterDetailsSheet(
+  BuildContext context,
+  Scooter scooter,
+  LatLng? userPosition,
+) {
+  final double? distanceInMeters = userPosition != null
+      ? const Distance().as(
+          LengthUnit.Meter,
+          userPosition,
+          LatLng(scooter.lat, scooter.lng),
+        )
+      : null;
+  final String distanceLabel = distanceInMeters != null
+      ? (distanceInMeters >= 1000
+            ? '${(distanceInMeters / 1000).toStringAsFixed(1)} km'
+            : '${distanceInMeters.toStringAsFixed(0)} m')
+      : 'Unknown';
+  final double? feePerMinute = scooter.feePerMinute;
+  final double? unlockFee = scooter.unlockFee;
+  final String scooterModel = scooter.modelName ?? scooter.code;
+
+  return Padding(
+    padding: const EdgeInsets.all(24.0),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Scooter Details',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(scooterModel, style: Theme.of(context).textTheme.bodyMedium),
+        const SizedBox(height: 24),
+        _buildDetailRow(
+          icon: Icons.battery_charging_full,
+          iconColor: Colors.green,
+          title: 'Battery',
+          value: '${scooter.batteryPercent}%',
+        ),
+        const SizedBox(height: 16),
+        _buildDetailRow(
+          icon: Icons.location_on,
+          iconColor: Colors.redAccent,
+          title: 'Distance',
+          value: distanceLabel,
+        ),
+        const SizedBox(height: 16),
+        _buildDetailRow(
+          icon: Icons.timer,
+          iconColor: Colors.blue,
+          title: 'Rate',
+          value: feePerMinute != null
+              ? '${feePerMinute.toStringAsFixed(2)} / min'
+              : 'TBD',
+        ),
+        if (unlockFee != null) ...[
+          const SizedBox(height: 16),
+          _buildDetailRow(
+            icon: Icons.lock_open,
+            iconColor: Colors.orange,
+            title: 'Unlock Fee',
+            value: unlockFee.toStringAsFixed(2),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
 class _ScooterRow extends StatelessWidget {
-  const _ScooterRow({required this.scooter});
+  const _ScooterRow({required this.scooter, this.userPosition});
 
   final Scooter scooter;
+  final LatLng? userPosition;
 
   @override
   Widget build(BuildContext context) {
@@ -463,12 +533,24 @@ class _ScooterRow extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              // TODO: Handle scooter selection
+              _showScooterDetailsBottomSheet(context);
             },
             child: const Text('Select'),
           ),
         ],
       ),
+    );
+  }
+
+  void _showScooterDetailsBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext context) {
+        return _buildScooterDetailsSheet(context, scooter, userPosition);
+      },
     );
   }
 }

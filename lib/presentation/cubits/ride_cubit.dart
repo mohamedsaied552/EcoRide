@@ -401,4 +401,6 @@ class RideCubit extends Cubit<RideState> {
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
   }
+
+  Future<void> endActiveRide() async {}
 }
