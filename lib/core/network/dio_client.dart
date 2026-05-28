@@ -12,11 +12,17 @@ class DioClient {
         BaseOptions(
           baseUrl: AppConstants.baseUrl,
           connectTimeout: const Duration(seconds: 20),
-          receiveTimeout: const Duration(seconds: 60),
-          sendTimeout: const Duration(seconds: 60),
+          // Increase receive/send timeouts to accommodate large file uploads
+          receiveTimeout: const Duration(minutes: 3),
+          sendTimeout: const Duration(minutes: 3),
           headers: <String, dynamic>{
             'Accept': 'application/json',
             'Content-Type': 'application/json',
+            // ngrok-free tunnels return an HTML interstitial ("ERR_NGROK_6024")
+            // for browser requests unless this header is present. Without it,
+            // Dio receives HTML and JSON decoding fails with
+            // "String is not a subtype of type Map".
+            'ngrok-skip-browser-warning': 'true',
           },
         ),
       ) {

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:glider/domain/entities/picked_image_data.dart';
 import 'package:glider/domain/entities/user.dart';
 import '../../data/repositories/backend_service.dart';
 import 'package:glider/data/services/image_picker_service.dart';
@@ -27,10 +28,8 @@ class RegisterState {
     this.phoneNumber = '',
     this.password = '',
     this.confirmPassword = '',
-    this.frontIdBytes,
-    this.frontIdName,
-    this.backIdBytes,
-    this.backIdName,
+    this.frontIdImage,
+    this.backIdImage,
     this.currentStep = RegisterStep.details,
     this.isPasswordObscured = true,
     this.isConfirmPasswordObscured = true,
@@ -45,10 +44,8 @@ class RegisterState {
   final String phoneNumber;
   final String password;
   final String confirmPassword;
-  final Uint8List? frontIdBytes;
-  final String? frontIdName;
-  final Uint8List? backIdBytes;
-  final String? backIdName;
+  final PickedImageData? frontIdImage;
+  final PickedImageData? backIdImage;
   final RegisterStep currentStep;
   final bool isPasswordObscured;
   final bool isConfirmPasswordObscured;
@@ -57,9 +54,17 @@ class RegisterState {
   final String? imageError;
   final AppUser? createdUser;
 
-  bool get hasFrontId => frontIdBytes != null && frontIdBytes!.isNotEmpty;
+  Uint8List? get frontIdBytes => frontIdImage?.bytes;
 
-  bool get hasBackId => backIdBytes != null && backIdBytes!.isNotEmpty;
+  Uint8List? get backIdBytes => backIdImage?.bytes;
+
+  String? get frontIdName => frontIdImage?.fileName;
+
+  String? get backIdName => backIdImage?.fileName;
+
+  bool get hasFrontId => frontIdImage != null && frontIdImage!.bytes.isNotEmpty;
+
+  bool get hasBackId => backIdImage != null && backIdImage!.bytes.isNotEmpty;
 
   bool get hasBothIdImages => hasFrontId && hasBackId;
 
@@ -69,10 +74,8 @@ class RegisterState {
     String? phoneNumber,
     String? password,
     String? confirmPassword,
-    Uint8List? frontIdBytes,
-    String? frontIdName,
-    Uint8List? backIdBytes,
-    String? backIdName,
+    PickedImageData? frontIdImage,
+    PickedImageData? backIdImage,
     RegisterStep? currentStep,
     bool? isPasswordObscured,
     bool? isConfirmPasswordObscured,
@@ -91,10 +94,8 @@ class RegisterState {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       password: password ?? this.password,
       confirmPassword: confirmPassword ?? this.confirmPassword,
-      frontIdBytes: clearFrontId ? null : (frontIdBytes ?? this.frontIdBytes),
-      frontIdName: clearFrontId ? null : (frontIdName ?? this.frontIdName),
-      backIdBytes: clearBackId ? null : (backIdBytes ?? this.backIdBytes),
-      backIdName: clearBackId ? null : (backIdName ?? this.backIdName),
+      frontIdImage: clearFrontId ? null : (frontIdImage ?? this.frontIdImage),
+      backIdImage: clearBackId ? null : (backIdImage ?? this.backIdImage),
       currentStep: currentStep ?? this.currentStep,
       isPasswordObscured: isPasswordObscured ?? this.isPasswordObscured,
       isConfirmPasswordObscured:
@@ -194,16 +195,14 @@ class RegisterCubit extends Cubit<RegisterState> {
       if (side == RegisterImageSide.front) {
         emit(
           state.copyWith(
-            frontIdBytes: image.bytes,
-            frontIdName: image.fileName,
+            frontIdImage: image,
             clearImageError: true,
           ),
         );
       } else {
         emit(
           state.copyWith(
-            backIdBytes: image.bytes,
-            backIdName: image.fileName,
+            backIdImage: image,
             clearImageError: true,
           ),
         );
