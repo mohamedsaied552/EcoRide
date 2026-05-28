@@ -101,21 +101,14 @@ class RideStarting extends RideState {
 }
 
 class RideInProgress extends RideState {
-  const RideInProgress({
-    required this.preview,
-    required this.ride,
-  });
+  const RideInProgress({required this.preview, required this.ride});
 
   final RidePreview preview;
   final Ride ride;
 }
 
 class RideFailure extends RideState {
-  const RideFailure({
-    required this.message,
-    this.serialNumber,
-    this.preview,
-  });
+  const RideFailure({required this.message, this.serialNumber, this.preview});
 
   final String message;
   final String? serialNumber;
@@ -123,12 +116,10 @@ class RideFailure extends RideState {
 }
 
 class RideCubit extends Cubit<RideState> {
-  RideCubit({
-    BackendService? backendService,
-    RideService? rideService,
-  }) : _backendService = backendService ?? BackendService(),
-       _rideService = rideService ?? RideService(),
-       super(const RideInitial());
+  RideCubit({BackendService? backendService, RideService? rideService})
+    : _backendService = backendService ?? BackendService(),
+      _rideService = rideService ?? RideService(),
+      super(const RideInitial());
 
   final BackendService _backendService;
   final RideService _rideService;
@@ -141,7 +132,8 @@ class RideCubit extends Cubit<RideState> {
     if (serialNumber == null || serialNumber.isEmpty) {
       emit(
         const RideFailure(
-          message: 'Unable to read this QR code. Please scan a Glider scooter QR.',
+          message:
+              'Unable to read this QR code. Please scan a Glider scooter QR.',
         ),
       );
       return;
@@ -150,9 +142,11 @@ class RideCubit extends Cubit<RideState> {
     emit(ScooterLoading(serialNumber: serialNumber));
 
     try {
-      final user = _backendService.currentUser ?? await _backendService.fetchCurrentUser();
-      final scooters = await _backendService.fetchNearbyScooters();
-      final scooter = scooters.where((item) {
+      final user =
+          _backendService.currentUser ??
+          await _backendService.fetchCurrentUser();
+      final bundle = await _backendService.fetchLiveMap();
+      final scooter = bundle.scooters.where((item) {
         final candidate = item.code.trim().toLowerCase();
         return candidate == serialNumber.toLowerCase();
       }).firstOrNull;
@@ -167,19 +161,29 @@ class RideCubit extends Cubit<RideState> {
         return;
       }
 
-      if (!scooter.isAvailable) {
+      // Verify the scooter's live status (battery + availability) right
+      // before allowing the user to start a ride. GET /Scooter/{serial}/status
+      final liveStatus = await _backendService.fetchScooterStatus(scooter.code);
+      if (!liveStatus.isAvailable) {
         emit(
           RideFailure(
-            message: 'This scooter is currently ${scooter.statusLabel.toLowerCase()}.',
+            message:
+                'This scooter is currently ${liveStatus.status.toLowerCase()}.',
             serialNumber: serialNumber,
           ),
         );
         return;
       }
 
+      final refreshedScooter = scooter.copyWith(
+        batteryPercent: liveStatus.batteryLevel,
+        rawStatus: liveStatus.status,
+        isAvailable: liveStatus.isAvailable,
+      );
+
       final preview = RidePreview(
         serialNumber: serialNumber,
-        scooter: scooter,
+        scooter: refreshedScooter,
         user: user,
         minimumRequiredBalance: minimumWalletBalance,
         allowedUnlockRadiusMeters: unlockRadiusMeters,
@@ -192,12 +196,7 @@ class RideCubit extends Cubit<RideState> {
 
       await validateProximity(preview: preview);
     } catch (error) {
-      emit(
-        RideFailure(
-          message: error.toString(),
-          serialNumber: serialNumber,
-        ),
-      );
+      emit(RideFailure(message: error.toString(), serialNumber: serialNumber));
     }
   }
 
@@ -293,7 +292,9 @@ class RideCubit extends Cubit<RideState> {
         scooterLatitude: preview.scooter.lat,
         scooterLongitude: preview.scooter.lng,
       );
-      final verifiedPreview = preview.copyWith(distanceToScooterMeters: distance);
+      final verifiedPreview = preview.copyWith(
+        distanceToScooterMeters: distance,
+      );
 
       if (!verifiedPreview.isWithinUnlockRadius) {
         emit(ProximityFailure(preview: verifiedPreview));
@@ -397,9 +398,7 @@ class RideCubit extends Cubit<RideState> {
     }
 
     return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-      ),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
   }
 }

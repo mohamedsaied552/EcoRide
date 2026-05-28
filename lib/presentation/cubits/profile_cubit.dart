@@ -8,7 +8,14 @@ import 'package:glider/domain/entities/user.dart';
 import '../../data/repositories/backend_service.dart';
 import 'package:glider/data/services/image_picker_service.dart';
 
-enum ProfileStatus { initial, loading, ready, saving, changingPassword, failure }
+enum ProfileStatus {
+  initial,
+  loading,
+  ready,
+  saving,
+  changingPassword,
+  failure,
+}
 
 class ProfileState {
   const ProfileState({
@@ -70,17 +77,21 @@ class ProfileState {
       fullName: fullName ?? this.fullName,
       email: email ?? this.email,
       phone: phone ?? this.phone,
-      currentPassword:
-          clearPasswordFields ? '' : (currentPassword ?? this.currentPassword),
+      currentPassword: clearPasswordFields
+          ? ''
+          : (currentPassword ?? this.currentPassword),
       newPassword: clearPasswordFields ? '' : (newPassword ?? this.newPassword),
-      confirmPassword:
-          clearPasswordFields ? '' : (confirmPassword ?? this.confirmPassword),
+      confirmPassword: clearPasswordFields
+          ? ''
+          : (confirmPassword ?? this.confirmPassword),
       avatarBytes: clearAvatar ? null : (avatarBytes ?? this.avatarBytes),
-      avatarFileName:
-          clearAvatar ? null : (avatarFileName ?? this.avatarFileName),
+      avatarFileName: clearAvatar
+          ? null
+          : (avatarFileName ?? this.avatarFileName),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage: clearSuccess
+          ? null
+          : (successMessage ?? this.successMessage),
     );
   }
 }
@@ -129,7 +140,8 @@ class ProfileCubit extends Cubit<ProfileState> {
   void updateCurrentPassword(String value) =>
       emit(state.copyWith(currentPassword: value));
 
-  void updateNewPassword(String value) => emit(state.copyWith(newPassword: value));
+  void updateNewPassword(String value) =>
+      emit(state.copyWith(newPassword: value));
 
   void updateConfirmPassword(String value) =>
       emit(state.copyWith(confirmPassword: value));
@@ -171,7 +183,8 @@ class ProfileCubit extends Cubit<ProfileState> {
         fullName: state.fullName.trim(),
         email: state.email.trim(),
         phoneNumber: state.phone.trim(),
-        avatarUrl: state.avatarDataUrl,
+        avatarBytes: state.avatarBytes,
+        avatarFileName: state.avatarFileName,
       );
       emit(
         state.copyWith(

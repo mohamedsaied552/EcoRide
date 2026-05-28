@@ -9,6 +9,8 @@ class Scooter {
     required this.locationName,
     this.modelName,
     this.rawStatus,
+    this.unlockFee,
+    this.feePerMinute,
   });
 
   final String id;
@@ -20,8 +22,13 @@ class Scooter {
   final String locationName;
   final String? modelName;
   final String? rawStatus;
+  final double? unlockFee;
+  final double? feePerMinute;
 
-  String get statusLabel => rawStatus ?? (isAvailable ? 'Available' : 'Offline');
+  String get statusLabel =>
+      rawStatus ?? (isAvailable ? 'Available' : 'Offline');
+
+  bool get hasCoordinates => lat != 0 || lng != 0;
 
   Scooter copyWith({
     String? id,
@@ -33,6 +40,8 @@ class Scooter {
     String? locationName,
     String? modelName,
     String? rawStatus,
+    double? unlockFee,
+    double? feePerMinute,
   }) {
     return Scooter(
       id: id ?? this.id,
@@ -44,26 +53,41 @@ class Scooter {
       locationName: locationName ?? this.locationName,
       modelName: modelName ?? this.modelName,
       rawStatus: rawStatus ?? this.rawStatus,
+      unlockFee: unlockFee ?? this.unlockFee,
+      feePerMinute: feePerMinute ?? this.feePerMinute,
     );
   }
 
   factory Scooter.fromJson(Map<String, dynamic> json) {
     final status = (json['status'] ?? '') as String;
+    final lat = ((json['lat'] ?? json['latitude'] ?? 0) as num).toDouble();
+    final lng = ((json['lng'] ?? json['longitude'] ?? 0) as num).toDouble();
+    final unlockFeeRaw = json['unlockFee'];
+    final feePerMinuteRaw = json['feePerMinute'];
+    // MapScooterDto from /Scooter/live-map omits an explicit status. When
+    // coordinates are present (i.e. the scooter is being advertised on the
+    // live map) we treat it as available unless told otherwise.
+    final hasMapStatus = json.containsKey('status');
     return Scooter(
       id: json['id'] as String,
       code:
-          (json['code'] ?? json['serialNumber'] ?? json['name'] ?? '') as String,
-      lat: ((json['lat'] ?? json['latitude'] ?? 0) as num).toDouble(),
-      lng: ((json['lng'] ?? json['longitude'] ?? 0) as num).toDouble(),
+          (json['code'] ?? json['serialNumber'] ?? json['name'] ?? '')
+              as String,
+      lat: lat,
+      lng: lng,
       batteryPercent:
-          ((json['batteryPercent'] ?? json['batteryLevel'] ?? 100) as num).toInt(),
+          ((json['batteryPercent'] ?? json['batteryLevel'] ?? 100) as num)
+              .toInt(),
       isAvailable:
           (json['isAvailable'] as bool?) ??
-          _isAvailableFromStatus(status),
+          (hasMapStatus ? _isAvailableFromStatus(status) : true),
       locationName:
-          (json['locationName'] ?? json['location'] ?? json['modelName'] ?? '') as String,
+          (json['locationName'] ?? json['location'] ?? json['modelName'] ?? '')
+              as String,
       modelName: json['modelName'] as String?,
       rawStatus: status.isEmpty ? null : status,
+      unlockFee: unlockFeeRaw is num ? unlockFeeRaw.toDouble() : null,
+      feePerMinute: feePerMinuteRaw is num ? feePerMinuteRaw.toDouble() : null,
     );
   }
 
@@ -85,6 +109,8 @@ class Scooter {
       'name': code,
       'lat': lat,
       'lng': lng,
+      'latitude': lat,
+      'longitude': lng,
       'batteryPercent': batteryPercent,
       'batteryLevel': batteryPercent,
       'isAvailable': isAvailable,
@@ -92,6 +118,8 @@ class Scooter {
       'locationName': locationName,
       'location': locationName,
       'modelName': modelName,
+      'unlockFee': unlockFee,
+      'feePerMinute': feePerMinute,
     };
   }
 }

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "66760687862",
+    "firebase_url": "https://ecoride-1229d-default-rtdb.firebaseio.com",
+    "project_id": "ecoride-1229d",
+    "storage_bucket": "ecoride-1229d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:66760687862:android:2b618bf912c6891417acd7",
+        "android_client_info": {
+          "package_name": "com.glider.scooter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "66760687862-hamk9flrs6dkvhugf34jf9t4e7ffr71n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBu38Te1S4IDW4gXxjeKd7HW60s8bB-vw0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "66760687862-hamk9flrs6dkvhugf34jf9t4e7ffr71n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "66760687862-0rahmcr0pelkhtlfehuoi3bqm1veemve.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.glider.scooter"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

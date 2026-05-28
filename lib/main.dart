@@ -1,9 +1,16 @@
+import 'dart:async';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:get_it/get_it.dart';
 
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/cubits/wallet_cubit.dart';
+import 'package:glider/core/events/app_event_bus.dart';
+import 'package:glider/core/notifications/notification_manager.dart';
 import 'package:glider/presentation/screens/login_screen.dart';
 import 'package:glider/presentation/screens/map_screen.dart';
 import 'package:glider/presentation/screens/onboarding_screen.dart';
@@ -12,9 +19,26 @@ import 'package:glider/presentation/screens/ride_history_screen.dart';
 import 'package:glider/presentation/screens/signup_screen.dart';
 import 'package:glider/presentation/screens/splash_screen.dart';
 import 'package:glider/presentation/screens/wallet_screen.dart';
+import 'firebase_options.dart';
 
-void main() {
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  final appEventBus = AppEventBus();
+  GetIt.I.registerSingleton<AppEventBus>(appEventBus);
+  final notificationManager = NotificationManager(eventBus: appEventBus);
+  GetIt.I.registerSingleton<NotificationManager>(notificationManager);
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // طلب الصلاحيات وتهيئة المستمعين عند الإقلاع. لو لسه ما عملش login
+  // مزامنة التوكن مع السيرفر هتفشل بـ 401 وهتتعاد بعد الـ login.
+  unawaited(notificationManager.initialize());
+
   runApp(
     MultiBlocProvider(
       providers: [
