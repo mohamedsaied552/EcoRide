@@ -18,6 +18,11 @@ class DioClient {
           headers: <String, dynamic>{
             'Accept': 'application/json',
             'Content-Type': 'application/json',
+            // ngrok-free tunnels return an HTML interstitial ("ERR_NGROK_6024")
+            // for browser requests unless this header is present. Without it,
+            // Dio receives HTML and JSON decoding fails with
+            // "String is not a subtype of type Map".
+            'ngrok-skip-browser-warning': 'true',
           },
         ),
       ) {

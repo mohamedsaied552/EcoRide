@@ -64,24 +64,34 @@ class AuthService {
       data: formData,
     );
 
-    final tokenJson = data['token'];
     final userJson = data['user'];
 
     final user = userJson is Map
         ? AppUser.fromJson(Map<String, dynamic>.from(userJson))
         : AppUser.fromJson(data);
 
+    // The OpenAPI spec returns AuthResultDto { user, token } with no explicit
+    // verification flag, but the API exposes a mandatory /Auth/verify-email
+    // step. Default to requiring verification unless the server explicitly
+    // opts out via `emailVerified: true` (or a future `requiresEmailVerification`
+    // flag), or the user's accountStatus is unambiguously verified/active.
     final explicitFlag = data['requiresEmailVerification'];
     final emailVerifiedFlag = data['emailVerified'];
     final accountStatus = (user.accountStatus ?? '').toLowerCase();
+    final idVerificationStatus = (user.idVerificationStatus ?? '')
+        .toLowerCase();
 
-    final requiresVerification = explicitFlag is bool
-        ? explicitFlag
-        : emailVerifiedFlag is bool
-        ? !emailVerifiedFlag
-        : tokenJson == null ||
-              accountStatus.contains('pending') ||
-              accountStatus.contains('unverified');
+    final bool requiresVerification;
+    if (explicitFlag is bool) {
+      requiresVerification = explicitFlag;
+    } else if (emailVerifiedFlag is bool) {
+      requiresVerification = !emailVerifiedFlag;
+    } else if (_isVerifiedAccountStatus(accountStatus) &&
+        _isVerifiedIdStatus(idVerificationStatus)) {
+      requiresVerification = false;
+    } else {
+      requiresVerification = true;
+    }
 
     // Do not persist tokens as part of the registration flow. Token
     // persistence and establishing an authenticated session should only
@@ -91,6 +101,16 @@ class AuthService {
       user: user,
       requiresEmailVerification: requiresVerification,
     );
+  }
+
+  static bool _isVerifiedAccountStatus(String status) {
+    if (status.isEmpty) return false;
+    return status == 'active' || status == 'verified' || status == 'enabled';
+  }
+
+  static bool _isVerifiedIdStatus(String status) {
+    if (status.isEmpty) return true;
+    return status == 'verified' || status == 'approved';
   }
 
   Future<AppUser?> verifyEmail({
@@ -133,17 +153,45 @@ class AuthService {
   Future<AppUser> updateProfile({
     required String fullName,
     required String phoneNumber,
-    String? avatarUrl,
+    Uint8List? avatarBytes,
+    String? avatarFileName,
   }) async {
-    final data = await _apiService.put(
+    final formMap = <String, dynamic>{
+      'FullName': fullName,
+      'PhoneNumber': phoneNumber,
+    };
+
+    if (avatarBytes != null && avatarBytes.isNotEmpty) {
+      formMap['AvatarPhoto'] = MultipartFile.fromBytes(
+        avatarBytes,
+        filename: avatarFileName?.isNotEmpty == true
+            ? avatarFileName!
+            : 'avatar.jpg',
+        contentType: DioMediaType.parse(_guessImageMimeType(avatarFileName)),
+      );
+    }
+
+    final formData = FormData.fromMap(formMap);
+    final data = await _apiService.multipartPut(
       '/Auth/profile',
-      data: <String, dynamic>{
-        'fullName': fullName,
-        'phoneNumber': phoneNumber,
-        'avatarUrl': avatarUrl,
-      },
+      data: formData,
     );
     return AppUser.fromJson(data);
+  }
+
+  Future<void> updateFcmToken(String token) async {
+    await _apiService.put(
+      '/Auth/fcm-token',
+      data: <String, dynamic>{'token': token},
+    );
+  }
+
+  String _guessImageMimeType(String? fileName) {
+    final lower = (fileName ?? '').toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
   }
 
   Future<void> forgotPassword(String email) async {

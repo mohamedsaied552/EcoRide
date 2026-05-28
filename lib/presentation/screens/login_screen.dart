@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import 'package:glider/presentation/cubits/login_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
+import 'package:glider/core/notifications/notification_manager.dart';
 import '../../data/repositories/backend_service.dart';
-import 'map_screen.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -61,10 +62,28 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
 
-    navigator.pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const MapScreen()),
-      (route) => false,
-    );
+    if (!mounted) {
+      return;
+    }
+
+    navigator.pushNamedAndRemoveUntil('/map', (route) => false);
+
+    // Initialize notifications in the background after navigation so the UI
+    // can move to the home page immediately.
+    _initializeNotifications();
+  }
+
+  /// Initialize NotificationManager after successful login
+  /// This ensures the user has a valid JWT token before requesting notification permissions
+  Future<void> _initializeNotifications() async {
+    try {
+      final notificationManager = GetIt.I<NotificationManager>();
+      await notificationManager.initialize();
+      debugPrint('Notifications initialized successfully after login.');
+    } catch (e) {
+      debugPrint('Error initializing notifications: $e');
+      // Non-blocking error - notifications failure shouldn't prevent app usage
+    }
   }
 
   Future<void> _showForgotPasswordDialog(BuildContext context) async {

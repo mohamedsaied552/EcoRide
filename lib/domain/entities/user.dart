@@ -55,29 +55,101 @@ class AppUser {
       rating: rating ?? this.rating,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       accountStatus: accountStatus ?? this.accountStatus,
-      idVerificationStatus:
-          idVerificationStatus ?? this.idVerificationStatus,
+      idVerificationStatus: idVerificationStatus ?? this.idVerificationStatus,
       phoneVerified: phoneVerified ?? this.phoneVerified,
       role: role ?? this.role,
     );
   }
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
-    final email = (json['email'] ?? '') as String;
+    // Some endpoints wrap the payload as { data: { ... } } or { user: { ... } }.
+    // Unwrap so callers can pass either the raw body or the wrapper.
+    Map<String, dynamic> source = json;
+    final nested = json['user'] ?? json['data'];
+    if (nested is Map) {
+      source = Map<String, dynamic>.from(nested);
+    }
+
+    final email = _readString(source, const ['email']);
+    final roleRaw = source['role'];
     return AppUser(
-      id: json['id'] as String,
-      name: (json['name'] ?? json['fullName'] ?? '') as String,
+      id: _readString(source, const ['id', 'userId', 'Id']),
+      name: _readString(source, const ['fullName', 'name', 'FullName']),
       email: email,
-      phone: (json['phone'] ?? json['phoneNumber'] ?? '') as String,
-      walletBalance: ((json['walletBalance'] ?? 0) as num).toDouble(),
-      ridesCount: (json['ridesCount'] ?? 0) as int,
-      rating: ((json['rating'] ?? 0) as num).toDouble(),
-      avatarUrl: json['avatarUrl'] as String?,
-      accountStatus: json['accountStatus'] as String?,
-      idVerificationStatus: json['idVerificationStatus'] as String?,
-      phoneVerified: (json['phoneVerified'] ?? false) as bool,
-      role: _roleFromString((json['role'] ?? _inferRoleFromEmail(email)) as String),
+      phone: _readString(source, const ['phoneNumber', 'phone', 'PhoneNumber']),
+      walletBalance: _readDouble(source, const ['walletBalance']),
+      ridesCount: _readInt(source, const ['ridesCount']),
+      rating: _readDouble(source, const ['rating']),
+      avatarUrl: _readNullableString(source, const ['avatarUrl']),
+      accountStatus: _readNullableString(source, const ['accountStatus']),
+      idVerificationStatus: _readNullableString(source, const [
+        'idVerificationStatus',
+      ]),
+      phoneVerified: _readBool(source, const ['phoneVerified']),
+      role: _roleFromString(
+        roleRaw is String ? roleRaw : _inferRoleFromEmail(email),
+      ),
     );
+  }
+
+  static String _readString(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is String) return value;
+      if (value != null) return value.toString();
+    }
+    return '';
+  }
+
+  static String? _readNullableString(
+    Map<String, dynamic> json,
+    List<String> keys,
+  ) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value == null) continue;
+      if (value is String) return value;
+      return value.toString();
+    }
+    return null;
+  }
+
+  static double _readDouble(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is num) return value.toDouble();
+      if (value is String) {
+        final parsed = double.tryParse(value);
+        if (parsed != null) return parsed;
+      }
+    }
+    return 0;
+  }
+
+  static int _readInt(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is num) return value.toInt();
+      if (value is String) {
+        final parsed = int.tryParse(value);
+        if (parsed != null) return parsed;
+      }
+    }
+    return 0;
+  }
+
+  static bool _readBool(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) {
+        final lower = value.toLowerCase();
+        if (lower == 'true') return true;
+        if (lower == 'false') return false;
+      }
+    }
+    return false;
   }
 
   static String _inferRoleFromEmail(String email) {

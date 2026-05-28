@@ -22,3 +22,6 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+// Note: Google services plugin is applied in the app module's build.gradle(.kts)
+// This root build.gradle.kts should not declare classpath here.
+

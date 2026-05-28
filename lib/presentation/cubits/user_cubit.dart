@@ -1,5 +1,9 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
 
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+
+import 'package:glider/core/notifications/notification_manager.dart';
 import 'package:glider/domain/entities/user.dart';
 import '../../data/repositories/backend_service.dart';
 
@@ -16,7 +20,8 @@ class UserState {
   final AppUser? user;
   final String? errorMessage;
 
-  bool get isAuthenticated => status == UserStatus.authenticated && user != null;
+  bool get isAuthenticated =>
+      status == UserStatus.authenticated && user != null;
 
   bool get isAdmin => user?.isAdmin ?? false;
 
@@ -37,8 +42,8 @@ class UserState {
 
 class UserCubit extends Cubit<UserState> {
   UserCubit({BackendService? backendService})
-      : _backendService = backendService ?? BackendService(),
-        super(const UserState(status: UserStatus.unauthenticated));
+    : _backendService = backendService ?? BackendService(),
+      super(const UserState(status: UserStatus.unauthenticated));
 
   final BackendService _backendService;
 
@@ -53,6 +58,9 @@ class UserCubit extends Cubit<UserState> {
           clearError: true,
         ),
       );
+      // Fire-and-forget: FCM token sync must never block the login flow
+      // (Firebase token retrieval can hang on cold start or denied perms).
+      unawaited(_syncFcmTokenIfNeeded());
       return user;
     } catch (error) {
       emit(
@@ -77,6 +85,7 @@ class UserCubit extends Cubit<UserState> {
           clearError: true,
         ),
       );
+      unawaited(_syncFcmTokenIfNeeded());
     } catch (error) {
       emit(
         state.copyWith(
@@ -118,8 +127,18 @@ class UserCubit extends Cubit<UserState> {
     }
   }
 
+  Future<void> _syncFcmTokenIfNeeded() async {
+    if (!GetIt.I.isRegistered<NotificationManager>()) return;
+    try {
+      await GetIt.I<NotificationManager>().syncTokenWithServer();
+    } catch (_) {
+      // Silent — failure to register the FCM token must not block login.
+    }
+  }
+
   Future<void> logout() async {
     await _backendService.logout();
+    await GetIt.I<NotificationManager>().logoutCleanup();
     emit(
       state.copyWith(
         status: UserStatus.unauthenticated,
