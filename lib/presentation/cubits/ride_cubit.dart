@@ -8,6 +8,9 @@ import 'package:glider/data/services/ride_service.dart';
 import 'package:glider/domain/entities/ride.dart';
 import 'package:glider/domain/entities/scooter.dart';
 import 'package:glider/domain/entities/user.dart';
+import 'package:glider/core/location/location_accuracy_validator.dart';
+import 'package:glider/data/repositories/ride_repository_impl.dart';
+import 'package:glider/domain/usecases/check_active_ride_use_case.dart';
 
 class RidePreview {
   const RidePreview({
@@ -64,6 +67,10 @@ class RideInitial extends RideState {
   const RideInitial();
 }
 
+class CheckingActiveRide extends RideState {
+  const CheckingActiveRide();
+}
+
 class ScooterLoading extends RideState {
   const ScooterLoading({required this.serialNumber});
 
@@ -116,13 +123,20 @@ class RideFailure extends RideState {
 }
 
 class RideCubit extends Cubit<RideState> {
-  RideCubit({BackendService? backendService, RideService? rideService})
-    : _backendService = backendService ?? BackendService(),
-      _rideService = rideService ?? RideService(),
-      super(const RideInitial());
+  RideCubit({
+    BackendService? backendService,
+    RideService? rideService,
+    CheckActiveRideUseCase? checkActiveRideUseCase,
+  }) : _backendService = backendService ?? BackendService(),
+       _rideService = rideService ?? RideService(),
+       _checkActiveRideUseCase =
+           checkActiveRideUseCase ??
+           CheckActiveRideUseCase(RideRepositoryImpl()),
+       super(const RideInitial());
 
   final BackendService _backendService;
   final RideService _rideService;
+  final CheckActiveRideUseCase _checkActiveRideUseCase;
 
   static const double minimumWalletBalance = 10.0;
   static const double unlockRadiusMeters = 35.0;
@@ -322,6 +336,50 @@ class RideCubit extends Cubit<RideState> {
     emit(const RideInitial());
   }
 
+  Future<void> appStartedCheck() async {
+    if (state is! RideInitial) return;
+
+    emit(const CheckingActiveRide());
+
+    try {
+      final user =
+          _backendService.currentUser ??
+          await _backendService.fetchCurrentUser();
+      final activeRide = await _checkActiveRideUseCase.call(user.id);
+      if (activeRide == null) {
+        emit(const RideInitial());
+        return;
+      }
+
+      final recoveredPreview = RidePreview(
+        serialNumber: activeRide.scooterCode,
+        scooter: Scooter(
+          id: activeRide.scooterCode,
+          code: activeRide.scooterCode,
+          lat: 0,
+          lng: 0,
+          batteryPercent: 0,
+          isAvailable: false,
+          locationName: activeRide.fromName,
+          modelName: null,
+          rawStatus: 'Active ride recovered',
+        ),
+        user: user,
+        minimumRequiredBalance: minimumWalletBalance,
+        allowedUnlockRadiusMeters: unlockRadiusMeters,
+        distanceToScooterMeters: 0,
+      );
+
+      emit(RideInProgress(preview: recoveredPreview, ride: activeRide));
+    } catch (error) {
+      emit(
+        RideFailure(
+          message: 'Unable to recover active ride: ${error.toString()}',
+        ),
+      );
+    }
+  }
+
   double calculateDistanceMeters({
     required double userLatitude,
     required double userLongitude,
@@ -397,9 +455,12 @@ class RideCubit extends Cubit<RideState> {
       throw Exception('Location permission is required to unlock a scooter.');
     }
 
-    return Geolocator.getCurrentPosition(
+    final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
+
+    LocationAccuracyValidator.validate(position);
+    return position;
   }
 
   Future<void> endActiveRide() async {}
