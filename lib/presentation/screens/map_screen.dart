@@ -495,7 +495,10 @@ Widget _buildScooterDetailsSheet(
   );
 }
 
+
+// ignore: unused_element
 class _ScooterRow extends StatelessWidget {
+  // ignore: unused_element_parameter
   const _ScooterRow({required this.scooter, this.userPosition});
 
   final Scooter scooter;

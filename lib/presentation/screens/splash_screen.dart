@@ -1,4 +1,8 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:glider/presentation/cubits/ride_cubit.dart';
+import 'package:glider/presentation/screens/ride_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -9,16 +13,36 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  late final StreamSubscription<RideState> _rideSubscription;
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
+    final rideCubit = context.read<RideCubit>();
+    rideCubit.appStartedCheck();
+
+    _rideSubscription = rideCubit.stream.listen((state) {
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-      );
+      if (state is RideInProgress) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const RideScreen()),
+        );
+      } else if (state is RideInitial || state is RideFailure) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+          );
+        });
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _rideSubscription.cancel();
+    super.dispose();
   }
 
   @override
@@ -29,11 +53,7 @@ class _SplashScreenState extends State<SplashScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F7A52),
-              Color(0xFF1FAE6C),
-              Color(0xFF8CE6B0),
-            ],
+            colors: [Color(0xFF0F7A52), Color(0xFF1FAE6C), Color(0xFF8CE6B0)],
           ),
         ),
         child: Center(
@@ -65,10 +85,7 @@ class _SplashScreenState extends State<SplashScreen> {
               const SizedBox(height: 6),
               const Text(
                 "Move faster, move smarter",
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ],
           ),
