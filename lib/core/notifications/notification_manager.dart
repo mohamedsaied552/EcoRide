@@ -4,16 +4,24 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:glider/core/events/app_event_bus.dart';
 import 'package:glider/data/services/notification_service.dart';
+import 'package:glider/data/repositories/fcm_token_repository_impl.dart';
+import 'package:glider/data/repositories/backend_service.dart';
+import 'package:glider/domain/usecases/update_fcm_token_use_case.dart';
 
 class NotificationManager {
   NotificationManager({
     NotificationService? notificationService,
     AppEventBus? eventBus,
+    UpdateFcmTokenUseCase? updateFcmTokenUseCase,
   }) : _notificationService = notificationService ?? NotificationService(),
-       _eventBus = eventBus ?? AppEventBus();
+       _eventBus = eventBus ?? AppEventBus(),
+       _updateFcmTokenUseCase =
+           updateFcmTokenUseCase ??
+           UpdateFcmTokenUseCase(FcmTokenRepositoryImpl());
 
   final NotificationService _notificationService;
   final AppEventBus _eventBus;
+  final UpdateFcmTokenUseCase _updateFcmTokenUseCase;
 
   String? currentFcmToken;
   bool _isInitialized = false;
@@ -84,6 +92,10 @@ class NotificationManager {
     }
 
     try {
+      final backend = BackendService();
+      final currentUser =
+          backend.currentUser ?? await backend.fetchCurrentUser();
+      await _updateFcmTokenUseCase.call(userId: currentUser.id, token: token);
       await _notificationService.updateFcmToken(token);
       debugPrint('FCM Token successfully synced with backend: $token');
     } catch (e) {
