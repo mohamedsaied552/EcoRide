@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:glider/core/storage/token_storage.dart';
 import 'package:glider/domain/entities/auth_result.dart';
@@ -147,7 +146,15 @@ class AuthService {
 
   Future<AppUser> getProfile() async {
     final data = await _apiService.get('/Auth/profile');
-    return AppUser.fromJson(data);
+    try {
+      return AppUser.fromJson(data);
+    } catch (error, stackTrace) {
+      debugPrint('PARSING ERROR: AppUser.fromJson failed in getProfile');
+      debugPrint('Error: $error');
+      debugPrint('Response payload: $data');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<AppUser> updateProfile({

@@ -97,6 +97,44 @@ class UserCubit extends Cubit<UserState> {
     }
   }
 
+  Future<bool> restoreSession() async {
+    emit(state.copyWith(status: UserStatus.loading, clearError: true));
+
+    if (!await _backendService.hasSavedSession()) {
+      emit(
+        state.copyWith(
+          status: UserStatus.unauthenticated,
+          clearUser: true,
+          clearError: true,
+        ),
+      );
+      return false;
+    }
+
+    try {
+      final user = await _backendService.fetchCurrentUser();
+      emit(
+        state.copyWith(
+          status: UserStatus.authenticated,
+          user: user,
+          clearError: true,
+        ),
+      );
+      unawaited(_syncFcmTokenIfNeeded());
+      return true;
+    } catch (error) {
+      await _backendService.logout();
+      emit(
+        state.copyWith(
+          status: UserStatus.unauthenticated,
+          clearUser: true,
+          clearError: true,
+        ),
+      );
+      return false;
+    }
+  }
+
   void applyAuthenticatedUser(AppUser user) {
     emit(
       state.copyWith(
