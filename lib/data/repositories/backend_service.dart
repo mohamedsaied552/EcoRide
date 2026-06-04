@@ -122,6 +122,10 @@ class BackendService {
     return user;
   }
 
+  Future<bool> hasSavedSession() {
+    return _authService.hasSavedSession();
+  }
+
   Future<AppUser> updateProfile({
     required String fullName,
     required String email,

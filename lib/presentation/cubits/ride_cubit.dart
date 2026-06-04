@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -155,11 +156,18 @@ class RideCubit extends Cubit<RideState> {
 
     emit(ScooterLoading(serialNumber: serialNumber));
 
+    debugPrint('RIDE: scanScooter started for serial=$serialNumber');
     try {
       final user =
           _backendService.currentUser ??
           await _backendService.fetchCurrentUser();
+      debugPrint(
+        'RIDE: current user loaded, walletBalance=${user.walletBalance}',
+      );
       final bundle = await _backendService.fetchLiveMap();
+      debugPrint(
+        'RIDE: live map loaded, scooter count=${bundle.scooters.length}',
+      );
       final scooter = bundle.scooters.where((item) {
         final candidate = item.code.trim().toLowerCase();
         return candidate == serialNumber.toLowerCase();
@@ -210,6 +218,8 @@ class RideCubit extends Cubit<RideState> {
 
       await validateProximity(preview: preview);
     } catch (error) {
+      debugPrint('RIDE ERROR: scanScooter failed for serial=$serialNumber');
+      debugPrint('Error: $error');
       emit(RideFailure(message: error.toString(), serialNumber: serialNumber));
     }
   }
@@ -221,8 +231,12 @@ class RideCubit extends Cubit<RideState> {
       return;
     }
 
+    debugPrint('RIDE: refreshRidePreview for serial=${preview.serialNumber}');
     try {
       final refreshedUser = await _backendService.fetchCurrentUser();
+      debugPrint(
+        'RIDE: refreshed current user, walletBalance=${refreshedUser.walletBalance}',
+      );
       final refreshedPreview = preview.copyWith(user: refreshedUser);
       if (!refreshedPreview.hasSufficientBalance) {
         emit(InsufficientFunds(preview: refreshedPreview));
@@ -231,6 +245,8 @@ class RideCubit extends Cubit<RideState> {
 
       await validateProximity(preview: refreshedPreview);
     } catch (error) {
+      debugPrint('RIDE ERROR: refreshRidePreview failed');
+      debugPrint('Error: $error');
       emit(
         RideFailure(
           message: error.toString(),
@@ -252,12 +268,16 @@ class RideCubit extends Cubit<RideState> {
 
     try {
       final position = await _resolveCurrentPosition();
+      debugPrint(
+        'RIDE: current position resolved lat=${position.latitude} lng=${position.longitude}',
+      );
       final distance = calculateDistanceMeters(
         userLatitude: position.latitude,
         userLongitude: position.longitude,
         scooterLatitude: activePreview.scooter.lat,
         scooterLongitude: activePreview.scooter.lng,
       );
+      debugPrint('RIDE: distance calculated=${distance.toStringAsFixed(2)}m');
 
       final updatedPreview = activePreview.copyWith(
         distanceToScooterMeters: distance,
@@ -270,6 +290,10 @@ class RideCubit extends Cubit<RideState> {
 
       emit(ScooterLoaded(preview: updatedPreview));
     } catch (error) {
+      debugPrint(
+        'RIDE ERROR: validateProximity failed for serial=${activePreview.serialNumber}',
+      );
+      debugPrint('Error: $error');
       emit(
         RideFailure(
           message: error.toString(),
@@ -340,6 +364,11 @@ class RideCubit extends Cubit<RideState> {
     if (state is! RideInitial) return;
 
     emit(const CheckingActiveRide());
+
+    if (!await _backendService.hasSavedSession()) {
+      emit(const RideInitial());
+      return;
+    }
 
     try {
       final user =

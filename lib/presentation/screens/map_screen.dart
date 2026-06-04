@@ -51,11 +51,34 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  Future<void> _goToMyLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+  LocationPermission? _cachedPermission;
 
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  Future<bool> _ensureLocationPermission() async {
+    if (_cachedPermission == LocationPermission.always ||
+        _cachedPermission == LocationPermission.whileInUse) {
+      return true;
+    }
+
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse) {
+      _cachedPermission = permission;
+      return true;
+    }
+
+    if (permission == LocationPermission.denied) {
+      final requested = await Geolocator.requestPermission();
+      _cachedPermission = requested;
+      return requested == LocationPermission.always ||
+          requested == LocationPermission.whileInUse;
+    }
+
+    _cachedPermission = permission;
+    return false;
+  }
+
+  Future<void> _goToMyLocation() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -67,16 +90,9 @@ class _MapScreenState extends State<MapScreen> {
       return;
     }
 
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      if (mounted) {
+    final permissionGranted = await _ensureLocationPermission();
+    if (!permissionGranted) {
+      if (_cachedPermission == LocationPermission.deniedForever && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -89,22 +105,39 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     try {
-    final position = await Geolocator.getCurrentPosition(
+      final lastPosition = await Geolocator.getLastKnownPosition();
+      if (lastPosition != null && mounted) {
+        final instantPosition =
+            LatLng(lastPosition.latitude, lastPosition.longitude);
+        setState(() {
+          _userPosition = instantPosition;
+        });
+        _mapController.move(instantPosition, 15.0);
+      }
+
+      unawaited(_fetchAndMoveToCurrentPosition());
+    } catch (e) {
+      debugPrint('Error fetching user location: $e');
+    }
+  }
+
+  Future<void> _fetchAndMoveToCurrentPosition() async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
+          accuracy: LocationAccuracy.medium,
         ),
       );
 
-      if (mounted) {
-        setState(() {
-          // 2. حفظ الموقع في المتغير لتحديث الشاشة ورسم الدائرة الزرقاء
-          _userPosition = LatLng(position.latitude, position.longitude);
-        });
+      if (!mounted) return;
 
-        _mapController.move(_userPosition!, 15.0);
-      }
+      final currentPosition = LatLng(position.latitude, position.longitude);
+      setState(() {
+        _userPosition = currentPosition;
+      });
+      _mapController.move(currentPosition, _mapController.camera.zoom);
     } catch (e) {
-      debugPrint('Error fetching user location: $e');
+      debugPrint('Error fetching fresh user location: $e');
     }
   }
 
