@@ -107,8 +107,10 @@ class _MapScreenState extends State<MapScreen> {
     try {
       final lastPosition = await Geolocator.getLastKnownPosition();
       if (lastPosition != null && mounted) {
-        final instantPosition =
-            LatLng(lastPosition.latitude, lastPosition.longitude);
+        final instantPosition = LatLng(
+          lastPosition.latitude,
+          lastPosition.longitude,
+        );
         setState(() {
           _userPosition = instantPosition;
         });
@@ -269,7 +271,9 @@ class _MapScreenState extends State<MapScreen> {
                     height: 25,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.15), // الدائرة الشفافة الخارجية
+                        color: Colors.blue.withValues(
+                          alpha: 0.15,
+                        ), // الدائرة الشفافة الخارجية
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -527,7 +531,6 @@ Widget _buildScooterDetailsSheet(
     ),
   );
 }
-
 
 // ignore: unused_element
 class _ScooterRow extends StatelessWidget {
