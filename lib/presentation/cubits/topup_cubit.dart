@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/data/services/payment_service.dart';
+import 'package:glider/data/repositories/wallet_repository_impl.dart';
+import 'package:glider/domain/usecases/initiate_top_up_use_case.dart';
 
 enum TopUpStatus { idle, loading, success, failure }
 
@@ -8,53 +9,71 @@ class TopUpState {
   const TopUpState({
     this.status = TopUpStatus.idle,
     this.errorMessage,
-    this.successMessage,
+    this.redirectUrl,
   });
 
   final TopUpStatus status;
   final String? errorMessage;
-  final String? successMessage;
+  final String? redirectUrl;
 
   TopUpState copyWith({
     TopUpStatus? status,
     String? errorMessage,
-    String? successMessage,
+    String? redirectUrl,
     bool clearError = false,
-    bool clearSuccess = false,
+    bool clearRedirectUrl = false,
   }) {
     return TopUpState(
       status: status ?? this.status,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      redirectUrl: clearRedirectUrl ? null : (redirectUrl ?? this.redirectUrl),
     );
   }
 }
 
 class TopUpCubit extends Cubit<TopUpState> {
-  TopUpCubit({PaymentService? paymentService})
-      : _paymentService = paymentService ?? PaymentService(),
-        super(const TopUpState());
+  TopUpCubit({InitiateTopUpUseCase? initiateTopUpUseCase})
+    : _initiateTopUpUseCase =
+          initiateTopUpUseCase ??
+          InitiateTopUpUseCase(repository: WalletRepositoryImpl()),
+      super(const TopUpState());
 
-  final PaymentService _paymentService;
+  final InitiateTopUpUseCase _initiateTopUpUseCase;
 
   Future<void> pay({
     required double amount,
-    required String method,
+    required String walletPhoneNumber,
   }) async {
     emit(
       state.copyWith(
         status: TopUpStatus.loading,
         clearError: true,
-        clearSuccess: true,
+        clearRedirectUrl: true,
       ),
     );
+
     try {
-      await _paymentService.topUp(amount: amount, method: method);
+      final redirectUrl = await _initiateTopUpUseCase.execute(
+        amount: amount,
+        walletPhoneNumber: walletPhoneNumber,
+      );
+
+      if (redirectUrl.isEmpty) {
+        throw StateError('Payment gateway returned an empty redirect URL.');
+      }
+      final uri = Uri.tryParse(redirectUrl);
+      if (uri == null ||
+          !uri.hasScheme ||
+          !(uri.scheme == 'http' || uri.scheme == 'https')) {
+        throw StateError(
+          'Payment gateway returned an invalid redirect URL: $redirectUrl',
+        );
+      }
+
       emit(
         state.copyWith(
           status: TopUpStatus.success,
-          successMessage: 'Top up successful via $method',
+          redirectUrl: redirectUrl,
           clearError: true,
         ),
       );
@@ -63,6 +82,7 @@ class TopUpCubit extends Cubit<TopUpState> {
         state.copyWith(
           status: TopUpStatus.failure,
           errorMessage: error.toString(),
+          clearRedirectUrl: true,
         ),
       );
     }

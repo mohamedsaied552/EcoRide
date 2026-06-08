@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:glider/presentation/cubits/profile_cubit.dart';
+import 'package:glider/presentation/cubits/locale_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/widgets/loading_spinner.dart';
 import 'login_screen.dart';
@@ -104,8 +105,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 46,
-                                    backgroundColor: const Color(0xFF1FAE6C)
-                                        .withValues(alpha: 0.18),
+                                    backgroundColor: const Color(
+                                      0xFF1FAE6C,
+                                    ).withValues(alpha: 0.18),
                                     backgroundImage: avatarProvider,
                                     child: avatarProvider == null
                                         ? const Icon(
@@ -118,21 +120,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 12),
                                   Text(
                                     state.user?.name ?? '',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     state.user?.email ?? '',
-                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
                                   ),
                                   const SizedBox(height: 14),
                                   Row(
                                     children: [
                                       Expanded(
                                         child: OutlinedButton.icon(
-                                          onPressed: () =>
-                                              cubit.pickAvatar(ImageSource.camera),
-                                          icon: const Icon(Icons.photo_camera_outlined),
+                                          onPressed: () => cubit.pickAvatar(
+                                            ImageSource.camera,
+                                          ),
+                                          icon: const Icon(
+                                            Icons.photo_camera_outlined,
+                                          ),
                                           label: const Text('Camera'),
                                         ),
                                       ),
@@ -142,7 +151,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           onPressed: () => cubit.pickAvatar(
                                             ImageSource.gallery,
                                           ),
-                                          icon: const Icon(Icons.photo_library_outlined),
+                                          icon: const Icon(
+                                            Icons.photo_library_outlined,
+                                          ),
                                           label: const Text('Gallery'),
                                         ),
                                       ),
@@ -150,6 +161,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ],
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _SectionCard(
+                            title: 'Preferences',
+                            child: Column(
+                              children: [
+                                BlocBuilder<LocaleCubit, Locale>(
+                                  builder: (context, locale) {
+                                    final label = locale.languageCode == 'en'
+                                        ? 'English'
+                                        : 'العربية';
+                                    return ListTile(
+                                      leading: const Icon(Icons.language),
+                                      title: const Text('Language'),
+                                      subtitle: Text(label),
+                                      trailing: const Icon(Icons.chevron_right),
+                                      onTap: () {
+                                        context
+                                            .read<LocaleCubit>()
+                                            .toggleLanguage();
+                                      },
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -165,13 +202,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     icon: Icons.person_outline,
                                     onChanged: cubit.updateFullName,
                                     validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
                                         return 'Please enter your name.';
                                       }
                                       return null;
                                     },
                                   ),
-                                  
+
                                   const SizedBox(height: 14),
                                   _ProfileField(
                                     controller: _phoneController,
@@ -180,7 +218,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     keyboardType: TextInputType.phone,
                                     onChanged: cubit.updatePhone,
                                     validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
                                         return 'Please enter your phone number.';
                                       }
                                       return null;
@@ -190,7 +229,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   SizedBox(
                                     width: double.infinity,
                                     child: ElevatedButton(
-                                      onPressed: state.status == ProfileStatus.saving
+                                      onPressed:
+                                          state.status == ProfileStatus.saving
                                           ? null
                                           : () async {
                                               if (_profileFormKey.currentState
@@ -199,7 +239,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 await cubit.saveProfile();
                                               }
                                             },
-                                      child: state.status == ProfileStatus.saving
+                                      child:
+                                          state.status == ProfileStatus.saving
                                           ? const SizedBox(
                                               height: 20,
                                               width: 20,
@@ -256,7 +297,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     obscureText: true,
                                     onChanged: cubit.updateConfirmPassword,
                                     validator: (value) {
-                                      if (value != _newPasswordController.text) {
+                                      if (value !=
+                                          _newPasswordController.text) {
                                         return 'Passwords do not match.';
                                       }
                                       return null;
@@ -266,7 +308,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   SizedBox(
                                     width: double.infinity,
                                     child: OutlinedButton(
-                                      onPressed: state.status ==
+                                      onPressed:
+                                          state.status ==
                                               ProfileStatus.changingPassword
                                           ? null
                                           : () async {
@@ -276,7 +319,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 await cubit.changePassword();
                                               }
                                             },
-                                      child: state.status ==
+                                      child:
+                                          state.status ==
                                               ProfileStatus.changingPassword
                                           ? const SizedBox(
                                               height: 20,
@@ -334,10 +378,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.child,
-  });
+  const _SectionCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -385,10 +426,7 @@ class _ProfileField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-      ),
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
       onChanged: onChanged,
       validator: validator,
     );

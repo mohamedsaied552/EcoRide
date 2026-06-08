@@ -108,6 +108,12 @@ class RideStarting extends RideState {
   final RidePreview preview;
 }
 
+class RideEnding extends RideState {
+  const RideEnding({required this.preview});
+
+  final RidePreview preview;
+}
+
 class RideInProgress extends RideState {
   const RideInProgress({required this.preview, required this.ride});
 
@@ -360,34 +366,33 @@ class RideCubit extends Cubit<RideState> {
     emit(const RideInitial());
   }
 
-  Future<void> appStartedCheck() async {
+  Future<void> appStartedCheck({AppUser? currentUser}) async {
     if (state is! RideInitial) return;
 
     emit(const CheckingActiveRide());
 
-    if (!await _backendService.hasSavedSession()) {
-      emit(const RideInitial());
-      return;
-    }
+    final user =
+        currentUser ??
+        _backendService.currentUser ??
+        await _backendService.fetchCurrentUser();
 
     try {
-      final user =
-          _backendService.currentUser ??
-          await _backendService.fetchCurrentUser();
       final activeRide = await _checkActiveRideUseCase.call(user.id);
       if (activeRide == null) {
         emit(const RideInitial());
         return;
       }
 
+      await _rideService.restoreActiveRide(activeRide, user);
+
       final recoveredPreview = RidePreview(
         serialNumber: activeRide.scooterCode,
         scooter: Scooter(
           id: activeRide.scooterCode,
           code: activeRide.scooterCode,
-          lat: 0,
-          lng: 0,
-          batteryPercent: 0,
+          lat: _rideService.latestState?.scooterPosition.latitude ?? 0,
+          lng: _rideService.latestState?.scooterPosition.longitude ?? 0,
+          batteryPercent: _rideService.latestState?.batteryPercent ?? 0,
           isAvailable: false,
           locationName: activeRide.fromName,
           modelName: null,
@@ -401,11 +406,8 @@ class RideCubit extends Cubit<RideState> {
 
       emit(RideInProgress(preview: recoveredPreview, ride: activeRide));
     } catch (error) {
-      emit(
-        RideFailure(
-          message: 'Unable to recover active ride: ${error.toString()}',
-        ),
-      );
+      debugPrint('RIDE ERROR: active ride restoration failed: $error');
+      emit(const RideInitial());
     }
   }
 
@@ -492,5 +494,32 @@ class RideCubit extends Cubit<RideState> {
     return position;
   }
 
-  Future<void> endActiveRide() async {}
+  Future<Ride> endActiveRide() async {
+    final preview = _previewFromState();
+    if (preview == null) {
+      throw StateError('No active ride preview available to end.');
+    }
+
+    emit(RideEnding(preview: preview));
+
+    try {
+      final position = await _resolveCurrentPosition();
+      final ride = await _rideService.endRide(
+        userLatitude: position.latitude,
+        userLongitude: position.longitude,
+        endPhotoUrl: '',
+      );
+      emit(const RideInitial());
+      return ride;
+    } catch (error) {
+      emit(
+        RideFailure(
+          message: error.toString(),
+          serialNumber: preview.serialNumber,
+          preview: preview,
+        ),
+      );
+      rethrow;
+    }
+  }
 }

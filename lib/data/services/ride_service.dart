@@ -126,7 +126,8 @@ class RideService {
     final scooters = await _backend.fetchNearbyScooters();
     final scooter = scooters.firstWhere(
       (s) => s.code == scooterCode,
-      orElse: () => throw StateError('Scooter with code $scooterCode not found'),
+      orElse: () =>
+          throw StateError('Scooter with code $scooterCode not found'),
     );
 
     if (!scooter.isAvailable) {
@@ -148,8 +149,10 @@ class RideService {
     _route
       ..clear()
       ..add(_scooterPosition);
-    _batteryPercent =
-        await _iot.receiveBatteryLevel(scooter.id, initial: scooter.batteryPercent);
+    _batteryPercent = await _iot.receiveBatteryLevel(
+      scooter.id,
+      initial: scooter.batteryPercent,
+    );
     _duration = DateTime.now().difference(ride.startedAt);
     _distanceKm = 0;
     _lowBalance = false;
@@ -166,34 +169,84 @@ class RideService {
     return ride;
   }
 
-  void _onTick(Scooter scooter) async {
+  Future<void> restoreActiveRide(Ride activeRide, AppUser currentUser) async {
+    if (_currentRide != null) return;
+
+    _currentRide = activeRide;
+    _userSnapshot = currentUser;
+
+    Scooter? scooter;
+    try {
+      final scooters = await _backend.fetchNearbyScooters();
+      scooter = scooters
+          .where(
+            (item) =>
+                item.code.trim().toLowerCase() ==
+                activeRide.scooterCode.trim().toLowerCase(),
+          )
+          .firstOrNull;
+    } catch (_) {
+      scooter = null;
+    }
+
+    final initialPosition = (scooter != null && scooter.hasCoordinates)
+        ? LatLng(scooter.lat, scooter.lng)
+        : const LatLng(30.0444, 31.2357);
+
+    _scooterPosition = initialPosition;
+    _userPosition = LatLng(
+      initialPosition.latitude + 0.0001,
+      initialPosition.longitude + 0.0001,
+    );
+    _route
+      ..clear()
+      ..add(_scooterPosition);
+    _batteryPercent = scooter?.batteryPercent ?? 80;
+    _duration = DateTime.now().difference(activeRide.startedAt);
+    _distanceKm = activeRide.distanceKm;
+    _lowBalance = false;
+    _outsideGeofence = false;
+    _secondsOutsideGeofence = 0;
+
+    _emitState(isActive: true);
+
+    _tickTimer?.cancel();
+    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _onTick(scooter);
+    });
+  }
+
+  void _onTick([Scooter? scooter]) async {
     if (_currentRide == null) return;
 
     _duration = DateTime.now().difference(_currentRide!.startedAt);
 
-    // Update scooter position & route.
-    final newPos =
-        await _scooterService.getScooterLocation(scooter.id, fallback: _scooterPosition);
-    _distanceKm += _incrementalDistance(_scooterPosition, newPos);
-    _scooterPosition = newPos;
-    _route.add(newPos);
+    final LatLng newPos = scooter != null
+        ? await _scooterService.getScooterLocation(
+            scooter.id,
+            fallback: _scooterPosition,
+          )
+        : _scooterPosition;
 
-    // Keep user close to scooter for the demo.
-    _userPosition = LatLng(
-      _scooterPosition.latitude + 0.0001,
-      _scooterPosition.longitude + 0.0001,
-    );
+    if (scooter != null) {
+      _distanceKm += _incrementalDistance(_scooterPosition, newPos);
+      _scooterPosition = newPos;
+      _route.add(newPos);
+      _batteryPercent = await _scooterService.getScooterBattery(
+        scooter.id,
+        initial: scooter.batteryPercent,
+      );
+      _userPosition = LatLng(
+        _scooterPosition.latitude + 0.0001,
+        _scooterPosition.longitude + 0.0001,
+      );
+    }
 
-    _batteryPercent =
-        await _scooterService.getScooterBattery(scooter.id, initial: scooter.batteryPercent);
-
-    // Wallet safety – compute current cost against starting wallet snapshot.
     final cost = calculateRideCost();
     final startingBalance = _userSnapshot?.walletBalance ?? 0;
     final remaining = startingBalance - cost;
     _lowBalance = remaining <= 0;
 
-    // Geofence – detect if we are outside allowed area.
     final inside = _geofence.isInside(_scooterPosition);
     if (!inside) {
       _secondsOutsideGeofence += 1;
@@ -203,7 +256,6 @@ class RideService {
       _outsideGeofence = false;
     }
 
-    // If outside geofence for too long or balance depleted, end ride automatically.
     if (_secondsOutsideGeofence >= 20 || _lowBalance) {
       unawaited(endRide());
       return;
@@ -220,8 +272,8 @@ class RideService {
     final lat2 = _degToRad(to.latitude);
     final sinDLat = math.sin(dLat / 2);
     final sinDLon = math.sin(dLon / 2);
-    final a = sinDLat * sinDLat +
-        sinDLon * sinDLon * math.cos(lat1) * math.cos(lat2);
+    final a =
+        sinDLat * sinDLat + sinDLon * sinDLon * math.cos(lat1) * math.cos(lat2);
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return (earthRadius * c) / 1000.0; // km
   }
@@ -251,7 +303,11 @@ class RideService {
     _stateController.add(state);
   }
 
-  Future<Ride> endRide() async {
+  Future<Ride> endRide({
+    double? userLatitude,
+    double? userLongitude,
+    String endPhotoUrl = '',
+  }) async {
     final ride = _currentRide;
     if (ride == null) {
       throw StateError('No active ride to end.');
@@ -261,14 +317,16 @@ class RideService {
     _tickTimer = null;
 
     final completedRide = await _backend.endActiveRide(
-      userLatitude: _userPosition.latitude,
-      userLongitude: _userPosition.longitude,
-      endPhotoUrl: '',
+      userLatitude: userLatitude ?? _userPosition.latitude,
+      userLongitude: userLongitude ?? _userPosition.longitude,
+      endPhotoUrl: endPhotoUrl,
     );
     _userSnapshot = await _backend.fetchCurrentUser();
 
     final scooters = await _backend.fetchNearbyScooters();
-    final scooter = scooters.where((item) => item.code == ride.scooterCode).firstOrNull;
+    final scooter = scooters
+        .where((item) => item.code == ride.scooterCode)
+        .firstOrNull;
     await _scooterService.lockScooter(scooter?.id ?? ride.scooterCode);
 
     _currentRide = null;
@@ -287,4 +345,3 @@ class RideService {
     _stateController.close();
   }
 }
-

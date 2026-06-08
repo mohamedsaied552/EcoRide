@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/presentation/screens/ride_screen.dart';
+import 'package:glider/presentation/screens/active_ride_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -24,30 +24,34 @@ class _SplashScreenState extends State<SplashScreen> {
     final userCubit = context.read<UserCubit>();
     final rideCubit = context.read<RideCubit>();
 
-    await Future.wait([
-      userCubit.restoreSession(),
-      rideCubit.appStartedCheck(),
-    ]);
-
+    final isAuthenticated = await userCubit.restoreSession();
     if (!mounted) return;
 
-    if (rideCubit.state is RideInProgress) {
+    if (!isAuthenticated) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const RideScreen()),
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
       );
       return;
     }
 
-    if (userCubit.state.isAuthenticated) {
-      Navigator.pushReplacementNamed(context, '/map');
+    await rideCubit.appStartedCheck(currentUser: userCubit.state.user);
+    if (!mounted) return;
+
+    final rideState = rideCubit.state;
+    if (rideState is RideInProgress) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ActiveRideScreen(
+            scooterCode: rideState.preview.serialNumber,
+          ),
+        ),
+      );
       return;
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-    );
+    Navigator.pushReplacementNamed(context, '/map');
   }
 
   @override
