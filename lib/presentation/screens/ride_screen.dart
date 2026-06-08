@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:glider/config/app_config.dart';
+import 'package:glider/core/location/location_accuracy_validator.dart';
 import 'package:glider/data/services/ride_service.dart';
 import 'package:glider/presentation/widgets/map_unavailable_card.dart';
 
@@ -16,22 +18,25 @@ class RideScreen extends StatefulWidget {
 
 class _RideScreenState extends State<RideScreen> {
   final RideService _rideService = RideService();
+  final UniqueKey _googleMapKey = UniqueKey();
   GoogleMapController? _mapController;
   StreamSubscription<RideSessionState>? _sub;
   RideSessionState? _state;
+  LatLng? _liveUserPosition;
 
   @override
   void initState() {
     super.initState();
     _state = _rideService.latestState;
+    _resolveInitialLocation();
     _sub = _rideService.stateStream.listen((event) {
+      if (!mounted) return;
       setState(() => _state = event);
-      if (_mapController != null) {
+      if (_mapController != null && _isValidLatLng(event.scooterPosition)) {
         _mapController!.animateCamera(
           CameraUpdate.newLatLng(event.scooterPosition),
         );
       }
-      if (!mounted) return;
       if (event.lowBalance) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -61,6 +66,29 @@ class _RideScreenState extends State<RideScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
+  bool _isValidLatLng(LatLng position) {
+    return position.latitude.abs() <= 90 &&
+        position.longitude.abs() <= 180 &&
+        !(position.latitude == 0 && position.longitude == 0);
+  }
+
+  Future<void> _resolveInitialLocation() async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      LocationAccuracyValidator.validate(position);
+      if (!mounted) return;
+      setState(() {
+        _liveUserPosition = LatLng(position.latitude, position.longitude);
+      });
+    } catch (error) {
+      debugPrint('Active ride initial location failed: $error');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = _state;
@@ -75,33 +103,55 @@ class _RideScreenState extends State<RideScreen> {
       points: state.route,
     );
 
+    final scooterMarkerPosition = _isValidLatLng(state.scooterPosition)
+        ? state.scooterPosition
+        : null;
+    final userMarkerPosition = _isValidLatLng(state.userPosition)
+        ? state.userPosition
+        : null;
+    final LatLng centerPosition =
+        _liveUserPosition ??
+        scooterMarkerPosition ??
+        userMarkerPosition ??
+        const LatLng(30.0444, 31.2357);
+
+    final markers = <Marker>{};
+    if (scooterMarkerPosition != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('scooter'),
+          position: scooterMarkerPosition,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueGreen,
+          ),
+        ),
+      );
+    }
+    if (userMarkerPosition != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('user'),
+          position: userMarkerPosition,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueAzure,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Active Ride')),
       body: Stack(
         children: [
           AppConfig.hasGoogleMapsApiKey
               ? GoogleMap(
+                  key: _googleMapKey,
                   initialCameraPosition: CameraPosition(
-                    target: state.scooterPosition,
+                    target: centerPosition,
                     zoom: 16,
                   ),
                   polylines: {polyline},
-                  markers: {
-                    Marker(
-                      markerId: const MarkerId('scooter'),
-                      position: state.scooterPosition,
-                      icon: BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueGreen,
-                      ),
-                    ),
-                    Marker(
-                      markerId: const MarkerId('user'),
-                      position: state.userPosition,
-                      icon: BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueAzure,
-                      ),
-                    ),
-                  },
+                  markers: markers,
                   myLocationButtonEnabled: false,
                   onMapCreated: (controller) => _mapController = controller,
                 )
@@ -191,9 +241,30 @@ class _RideScreenState extends State<RideScreen> {
                       height: 48,
                       child: ElevatedButton(
                         onPressed: () async {
-                          final finishedRide = await _rideService.endRide();
-                          if (!context.mounted) return;
-                          Navigator.pop(context, finishedRide);
+                          try {
+                            final currentPosition =
+                                await Geolocator.getCurrentPosition(
+                                  locationSettings: const LocationSettings(
+                                    accuracy: LocationAccuracy.high,
+                                  ),
+                                );
+                            LocationAccuracyValidator.validate(currentPosition);
+                            final finishedRide = await _rideService.endRide(
+                              userLatitude: currentPosition.latitude,
+                              userLongitude: currentPosition.longitude,
+                              endPhotoUrl: '',
+                            );
+                            if (!context.mounted) return;
+                            Navigator.pop(context, finishedRide);
+                          } catch (error) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error ending ride: $error'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         },
                         child: const Text('End ride'),
                       ),

@@ -1,13 +1,18 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
+import 'dart:ui' as ui;
+// 'dart:typed_data' is provided via flutter/foundation imports when needed
 
 import 'package:get_it/get_it.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter/services.dart';
 
 import 'package:glider/core/events/app_event_bus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:glider/presentation/cubits/map_cubit.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
@@ -31,6 +36,8 @@ class _MapScreenState extends State<MapScreen> {
   late final MapCubit _mapCubit;
   late final StreamSubscription<MapRefreshRequestedEvent> _eventSubscription;
   final MapController _mapController = MapController();
+  Uint8List? _scooterMarkerBytes;
+  bool _scooterMarkerLoading = false;
 
   // 1. متغير لحفظ موقع المستخدم الحالي ورسم الدائرة الزرقاء بناءً عليه
   LatLng? _userPosition;
@@ -39,6 +46,9 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _mapCubit = MapCubit()..load();
+
+    // Start preparing the custom scooter marker asset
+    _prepareScooterMarker();
 
     final eventBus = GetIt.I<AppEventBus>();
     _eventSubscription = eventBus.on<MapRefreshRequestedEvent>().listen((_) {
@@ -49,6 +59,72 @@ class _MapScreenState extends State<MapScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _goToMyLocation();
     });
+  }
+
+  Future<void> _prepareScooterMarker() async {
+    if (_scooterMarkerLoading || _scooterMarkerBytes != null) return;
+    _scooterMarkerLoading = true;
+    try {
+      final bytes = await _loadAndResizeImageBytes(
+        'assets/icons/scooter_icon.png',
+        110,
+      );
+      if (!mounted) return;
+      setState(() {
+        _scooterMarkerBytes = bytes;
+      });
+    } finally {
+      _scooterMarkerLoading = false;
+    }
+  }
+
+  // Loads an image asset and resizes it to `targetWidth` pixels, returning PNG bytes.
+  // Returns null if loading fails.
+  Future<Uint8List?> _loadAndResizeImageBytes(
+    String assetPath,
+    int targetWidth,
+  ) async {
+    try {
+      final data = await rootBundle.load(assetPath);
+      final codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+        targetWidth: targetWidth,
+      );
+      final frame = await codec.getNextFrame();
+      final ui.Image image = frame.image;
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Failed to load/resize asset "$assetPath": $e');
+      return null;
+    }
+  }
+
+  Future<void> _launchGoogleMapsNavigation(double lat, double lng) async {
+    final urlString =
+        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=walking';
+    final uri = Uri.parse(urlString);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open Google Maps on this device.'),
+            ),
+          );
+        }
+        debugPrint('Cannot launch maps URL: $uri');
+      }
+    } catch (e) {
+      debugPrint('Error launching maps: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error opening navigation.')),
+        );
+      }
+    }
   }
 
   LocationPermission? _cachedPermission;
@@ -105,29 +181,37 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     try {
-      final lastPosition = await Geolocator.getLastKnownPosition();
-      if (lastPosition != null && mounted) {
-        final instantPosition = LatLng(
-          lastPosition.latitude,
-          lastPosition.longitude,
-        );
-        setState(() {
-          _userPosition = instantPosition;
-        });
-        _mapController.move(instantPosition, 15.0);
-      }
+      if (!kIsWeb) {
+        final lastPosition = await Geolocator.getLastKnownPosition();
+        if (lastPosition != null && mounted) {
+          final instantPosition = LatLng(
+            lastPosition.latitude,
+            lastPosition.longitude,
+          );
+          setState(() {
+            _userPosition = instantPosition;
+          });
+          _mapController.move(instantPosition, 15.0);
+        }
 
-      unawaited(_fetchAndMoveToCurrentPosition());
+        unawaited(_fetchAndMoveToCurrentPosition());
+      } else {
+        await _fetchAndMoveToCurrentPosition(highAccuracy: true);
+      }
     } catch (e) {
       debugPrint('Error fetching user location: $e');
     }
   }
 
-  Future<void> _fetchAndMoveToCurrentPosition() async {
+  Future<void> _fetchAndMoveToCurrentPosition({
+    bool highAccuracy = false,
+  }) async {
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
+        locationSettings: LocationSettings(
+          accuracy: highAccuracy
+              ? LocationAccuracy.high
+              : LocationAccuracy.medium,
         ),
       );
 
@@ -252,11 +336,18 @@ class _MapScreenState extends State<MapScreen> {
                         onTap: () {
                           _showScooterDetailsBottomSheet(context, scooter);
                         },
-                        child: const Icon(
-                          Icons.location_on,
-                          size: 40.0,
-                          color: Color(0xFF1FAE6C),
-                        ),
+                        child: _scooterMarkerBytes != null
+                            ? Image.memory(
+                                _scooterMarkerBytes!,
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.contain,
+                              )
+                            : const Icon(
+                                Icons.location_on,
+                                size: 40.0,
+                                color: Color(0xFF1FAE6C),
+                              ),
                       ),
                     ),
                   )
@@ -527,6 +618,33 @@ Widget _buildScooterDetailsSheet(
             value: unlockFee.toStringAsFixed(2),
           ),
         ],
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.navigation),
+            label: const Text('Direct Me'),
+            onPressed: () {
+              final state = context.findAncestorStateOfType<_MapScreenState>();
+              if (state != null) {
+                state._launchGoogleMapsNavigation(scooter.lat, scooter.lng);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Unable to open navigation.')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: const Color(0xFF1FAE6C),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
       ],
     ),
   );

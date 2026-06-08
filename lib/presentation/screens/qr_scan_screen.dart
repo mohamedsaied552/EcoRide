@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:glider/presentation/cubits/ride_cubit.dart';
-import 'package:glider/presentation/screens/ride_screen.dart';
+import 'package:glider/presentation/cubits/topup_cubit.dart';
+import 'package:glider/presentation/screens/active_ride_screen.dart';
 import 'package:glider/presentation/screens/topup_screen.dart';
 import 'package:glider/presentation/widgets/qr_view.dart';
 
@@ -29,13 +30,16 @@ class _QRScanScreenState extends State<QRScanScreen> {
         }
 
         if (state is RideInProgress) {
+          final scooterCode = state.preview.serialNumber;
           if (_isSheetVisible && Navigator.of(context).canPop()) {
             Navigator.of(context).pop();
             _isSheetVisible = false;
           }
           context.read<RideCubit>().reset();
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const RideScreen()),
+            MaterialPageRoute(
+              builder: (_) => ActiveRideScreen(scooterCode: scooterCode),
+            ),
           );
           return;
         }
@@ -250,7 +254,10 @@ class _RidePreviewSheet extends StatelessWidget {
                       onPressed: () async {
                         await Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => const TopUpScreen(),
+                            builder: (_) => BlocProvider(
+                              create: (_) => TopUpCubit(),
+                              child: const TopUpScreen(),
+                            ),
                           ),
                         );
                         if (context.mounted) {

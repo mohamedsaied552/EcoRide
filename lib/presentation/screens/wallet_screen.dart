@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:glider/presentation/cubits/topup_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/widgets/loading_spinner.dart';
 import 'topup_screen.dart';
@@ -64,7 +65,12 @@ class WalletScreen extends StatelessWidget {
                           onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const TopUpScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => BlocProvider(
+                                  create: (_) => TopUpCubit(),
+                                  child: const TopUpScreen(),
+                                ),
+                              ),
                             );
                           },
                           child: const Text('Add balance'),

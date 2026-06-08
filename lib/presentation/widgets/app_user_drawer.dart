@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:glider/presentation/cubits/locale_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/domain/entities/user.dart';
+import 'package:glider/presentation/screens/help_center_screen.dart';
 import 'package:glider/presentation/screens/login_screen.dart';
 
 class AppUserDrawer extends StatelessWidget {
@@ -85,6 +87,47 @@ class AppUserDrawer extends StatelessWidget {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, '/history');
                     },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1FAE6C).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: BlocBuilder<LocaleCubit, Locale>(
+                        builder: (context, locale) {
+                          final title = locale.languageCode == 'ar'
+                              ? 'مركز مساعدة'
+                              : 'Help Center';
+                          return ListTile(
+                            leading: const Icon(
+                              Icons.help_outline,
+                              color: Color(0xFF1FAE6C),
+                            ),
+                            title: Text(
+                              title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              final navigator = Navigator.of(context);
+                              navigator.pop();
+                              navigator.push(
+                                MaterialPageRoute(
+                                  builder: (_) => const HelpCenterScreen(),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ],
               ),
