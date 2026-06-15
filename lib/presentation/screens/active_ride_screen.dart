@@ -6,11 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:glider/data/repositories/backend_service.dart';
 import 'package:glider/data/services/ride_service.dart';
 import 'package:glider/domain/entities/map_zone.dart';
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/screens/ride_summary_screen.dart';
@@ -132,13 +134,12 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
   }
 
   Future<void> _startLocationTracking() async {
+    final l10n = AppLocalizations.of(context);
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location services are disabled. Please enable GPS.'),
-          ),
+          SnackBar(content: Text(l10n.locationDisabled)),
         );
       }
       return;
@@ -148,11 +149,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
     if (!permissionGranted) {
       if (_cachedPermission == LocationPermission.deniedForever && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Location permissions are permanently denied. Enable it from settings.',
-            ),
-          ),
+          SnackBar(content: Text(l10n.locationPermanentlyDenied)),
         );
       }
       return;
@@ -280,17 +277,14 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
   }
 
   void _showRideAlerts(RideSessionState state) {
+    final l10n = AppLocalizations.of(context);
     if (state.lowBalance) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Wallet balance is low. Ending ride for safety.'),
-        ),
+        SnackBar(content: Text(l10n.walletBalanceLow)),
       );
     } else if (state.outsideGeofence) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Outside operating zone. Please return to the zone.'),
-        ),
+        SnackBar(content: Text(l10n.outsideOperatingZone)),
       );
     }
   }
@@ -316,12 +310,35 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
   Future<void> _onEndRide() async {
     if (_isEndingRide) return;
 
+    final l10n = AppLocalizations.of(context);
+    final picker = ImagePicker();
+    final photo = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+      maxWidth: 1600,
+    );
+
+    if (!mounted) return;
+    if (photo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.endRidePhotoRequired),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final photoBytes = await photo.readAsBytes();
+
     setState(() {
       _isEndingRide = true;
     });
 
     try {
-      final ride = await context.read<RideCubit>().endActiveRide();
+      final ride = await context.read<RideCubit>().endActiveRide(
+        endPhotoBytes: photoBytes,
+      );
       if (!mounted) return;
 
       await context.read<UserCubit>().loadCurrentUser();
@@ -344,9 +361,10 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
         _isEndingRide = false;
       });
 
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error ending ride: $e'),
+          content: Text(l10n.errorEndingRide('$e')),
           backgroundColor: Colors.red,
         ),
       );
@@ -355,6 +373,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final rideState = _rideState;
     final duration = rideState?.duration ?? Duration.zero;
     final currentCost =
@@ -474,14 +493,14 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Ongoing Ride',
+                                l10n.ongoingRide,
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
                                 ),
                               ),
                               Text(
-                                'Scooter ID: ${widget.scooterCode}',
+                                l10n.scooterId(widget.scooterCode),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -502,9 +521,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                             color: Colors.green,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
-                            'Active',
-                            style: TextStyle(
+                          child: Text(
+                            l10n.active,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
@@ -582,7 +601,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            '${currentCost.toStringAsFixed(2)} EGP',
+                            l10n.costEgp(currentCost.toStringAsFixed(2)),
                             style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
@@ -602,13 +621,13 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                                       : const Color(0xFF1FAE6C),
                                 ),
                                 const SizedBox(width: 6),
-                                Text('$batteryPercent%'),
+                                Text(l10n.percentSuffix('$batteryPercent')),
                               ],
                             ),
                           ],
                           const SizedBox(height: 4),
                           Text(
-                            'CURRENT COST',
+                            l10n.currentCost,
                             style: TextStyle(
                               color: Colors.grey[500],
                               fontWeight: FontWeight.bold,
@@ -642,15 +661,15 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Row(
+                                  : Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.stop, size: 24),
-                                        SizedBox(width: 8),
+                                        const Icon(Icons.stop, size: 24),
+                                        const SizedBox(width: 8),
                                         Text(
-                                          'END RIDE',
-                                          style: TextStyle(
+                                          l10n.endRideUpper,
+                                          style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                             letterSpacing: 1,

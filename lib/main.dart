@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get_it/get_it.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/locale_cubit.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
@@ -17,11 +18,15 @@ import 'package:glider/presentation/screens/login_screen.dart';
 import 'package:glider/presentation/screens/map_screen.dart';
 import 'package:glider/presentation/screens/onboarding_screen.dart';
 import 'package:glider/presentation/screens/profile_screen.dart';
-import 'package:glider/presentation/screens/ride_history_screen.dart';
 import 'package:glider/presentation/screens/signup_screen.dart';
 import 'package:glider/presentation/screens/splash_screen.dart';
 import 'package:glider/presentation/screens/wallet_screen.dart';
 import 'firebase_options.dart';
+
+
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -33,12 +38,13 @@ void main() async {
 
   final appEventBus = AppEventBus();
   GetIt.I.registerSingleton<AppEventBus>(appEventBus);
-  final notificationManager = NotificationManager(eventBus: appEventBus);
+  final notificationManager = NotificationManager(
+    eventBus: appEventBus,
+    scaffoldMessengerKey: rootScaffoldMessengerKey,
+  );
   GetIt.I.registerSingleton<NotificationManager>(notificationManager);
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // طلب الصلاحيات وتهيئة المستمعين عند الإقلاع. لو لسه ما عملش login
-  // مزامنة التوكن مع السيرفر هتفشل بـ 401 وهتتعاد بعد الـ login.
   unawaited(notificationManager.initialize());
 
   runApp(
@@ -67,13 +73,14 @@ class ScooterApp extends StatelessWidget {
     return BlocBuilder<LocaleCubit, Locale>(
       builder: (context, locale) {
         return MaterialApp(
-          title: 'Smart Scooter',
+          key: ValueKey(locale.languageCode),
+          navigatorKey: rootNavigatorKey,
+          scaffoldMessengerKey: rootScaffoldMessengerKey,
+          onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
           locale: locale,
-          supportedLocales: const [
-            Locale('en'),
-            Locale('ar'),
-          ],
+          supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: const [
+            AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
@@ -120,7 +127,6 @@ class ScooterApp extends StatelessWidget {
             '/map': (_) => const MapScreen(),
             '/onboarding': (_) => const OnboardingScreen(),
             '/profile': (_) => const ProfileScreen(),
-            '/history': (_) => const RideHistoryScreen(),
             '/wallet': (_) => const WalletScreen(),
           },
         );

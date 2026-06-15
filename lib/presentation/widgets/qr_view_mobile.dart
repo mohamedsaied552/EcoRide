@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
+
 class QrViewMobile extends StatefulWidget {
   const QrViewMobile({super.key});
 
@@ -13,8 +15,10 @@ class _QrViewMobileState extends State<QrViewMobile> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Scan QR")),
+      appBar: AppBar(title: Text(l10n.scanQr)),
       body: MobileScanner(
         onDetect: (capture) {
           if (isScanned || capture.barcodes.isEmpty) {

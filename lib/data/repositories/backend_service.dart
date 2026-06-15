@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:glider/core/constants/app_constants.dart';
 import 'package:glider/core/errors/api_exception.dart';
 import 'package:glider/domain/entities/live_map_bundle.dart';
@@ -7,7 +8,6 @@ import 'package:glider/domain/entities/paginated_result.dart';
 import 'package:glider/domain/entities/ride.dart';
 import 'package:glider/domain/entities/scooter.dart';
 import 'package:glider/domain/entities/scooter_status_info.dart';
-import 'package:glider/domain/entities/signup_result.dart';
 import 'package:glider/domain/entities/user.dart';
 import 'package:glider/domain/entities/zone.dart';
 import 'package:glider/data/datasources/api_service.dart';
@@ -44,75 +44,49 @@ class BackendService {
 
   bool get isLoggedIn => _currentUser != null;
 
-  Future<AppUser> login(String email, String password) async {
-    final user = await _authService.login(email: email, password: password);
-    _currentUser = user;
-    return user;
-  }
-
-  Future<SignupResult> signup({
-    required String fullName,
-    required String email,
+  Future<AppUser> loginWithPhone({
     required String phoneNumber,
     required String password,
-    required Uint8List idFrontPhotoBytes,
-    required Uint8List idBackPhotoBytes,
   }) async {
-    final result = await _authService.register(
-      fullName: fullName,
-      email: email,
+    final user = await _authService.loginWithPhone(
       phoneNumber: phoneNumber,
       password: password,
-      idFrontPhotoBytes: idFrontPhotoBytes,
-      idBackPhotoBytes: idBackPhotoBytes,
     );
-    // Only treat the user as logged-in if the backend registration flow
-    // actually resulted in a saved authentication session AND verification
-    // is not required. Verification gates session establishment.
-    if (result.requiresEmailVerification) {
-      _currentUser = null;
-      return result;
-    }
-    final hasSession = await _authService.hasSavedSession();
-    if (hasSession) {
-      _currentUser = result.user;
-    }
-    return result;
-  }
-
-  Future<AppUser> verifyEmail({
-    required String email,
-    required String code,
-  }) async {
-    final verifiedUser = await _authService.verifyEmail(
-      email: email,
-      code: code,
-    );
-    final user = verifiedUser ?? await _authService.getProfile();
     _currentUser = user;
     return user;
   }
 
-  Future<void> resendOtp(String email) {
-    return _authService.resendVerificationCode(email);
-  }
-
-  Future<void> forgotPassword(String email) {
-    return _authService.forgotPassword(email);
+  Future<AppUser> register({
+    required String fullName,
+    required String phoneNumber,
+    required String password,
+    required String firebaseToken,
+    required Uint8List idFrontPhotoBytes,
+    required Uint8List idBackPhotoBytes,
+    required Uint8List selfiePhotoBytes,
+  }) async {
+    final user = await _authService.register(
+      fullName: fullName,
+      phoneNumber: phoneNumber,
+      password: password,
+      firebaseToken: firebaseToken,
+      idFrontPhotoBytes: idFrontPhotoBytes,
+      idBackPhotoBytes: idBackPhotoBytes,
+      selfiePhotoBytes: selfiePhotoBytes,
+    );
+    _currentUser = user;
+    return user;
   }
 
   Future<void> resetPassword({
-    required String email,
-    required String token,
+    required String phoneNumber,
+    required String firebaseToken,
     required String newPassword,
-  }) async {
-    await _apiService.post(
-      '/Auth/reset-password',
-      data: <String, dynamic>{
-        'email': email,
-        'token': token,
-        'newPassword': newPassword,
-      },
+  }) {
+    return _authService.resetPassword(
+      phoneNumber: phoneNumber,
+      firebaseToken: firebaseToken,
+      newPassword: newPassword,
     );
   }
 
@@ -163,8 +137,11 @@ class BackendService {
     await _authService.logout();
   }
 
-  Future<List<Scooter>> fetchNearbyScooters() {
-    return _scooterApiService.getScooters();
+  Future<List<Scooter>> fetchNearbyScooters() async {
+    // Rider map uses GET /Scooter/live-map (authorized for app users).
+    // GET /Scooter (paginated admin list) returns 403 for non-admin riders.
+    final bundle = await fetchLiveMap();
+    return bundle.scooters;
   }
 
   Future<LiveMapBundle> fetchLiveMap() {
@@ -317,16 +294,34 @@ class BackendService {
   Future<Ride> endActiveRide({
     required double userLatitude,
     required double userLongitude,
-    required String endPhotoUrl,
+    Uint8List? endPhotoBytes,
+    String endPhotoUrl = '',
   }) async {
-    final data = await _apiService.post(
-      '/Ride/active/end',
-      data: <String, dynamic>{
+    final Map<String, dynamic> data;
+    if (endPhotoBytes != null && endPhotoBytes.isNotEmpty) {
+      final formData = FormData.fromMap(<String, dynamic>{
         'userLatitude': userLatitude,
         'userLongitude': userLongitude,
-        'endPhotoUrl': endPhotoUrl,
-      },
-    );
+        'EndPhoto': MultipartFile.fromBytes(
+          endPhotoBytes,
+          filename: 'end_ride.jpg',
+          contentType: DioMediaType.parse('image/jpeg'),
+        ),
+      });
+      data = await _apiService.multipartPost(
+        '/Ride/active/end',
+        data: formData,
+      );
+    } else {
+      data = await _apiService.post(
+        '/Ride/active/end',
+        data: <String, dynamic>{
+          'userLatitude': userLatitude,
+          'userLongitude': userLongitude,
+          'endPhotoUrl': endPhotoUrl,
+        },
+      );
+    }
 
     final ride = Ride.fromJson(data);
     _upsertRide(ride);

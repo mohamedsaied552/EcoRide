@@ -2,70 +2,86 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:glider/core/events/app_event_bus.dart';
+import 'package:glider/core/notifications/local_notification_service.dart';
+import 'package:glider/core/storage/fcm_token_storage.dart';
+import 'package:glider/core/storage/token_storage.dart';
 import 'package:glider/data/services/notification_service.dart';
-import 'package:glider/data/repositories/fcm_token_repository_impl.dart';
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/domain/usecases/update_fcm_token_use_case.dart';
 
 class NotificationManager {
   NotificationManager({
     NotificationService? notificationService,
     AppEventBus? eventBus,
-    UpdateFcmTokenUseCase? updateFcmTokenUseCase,
+    LocalNotificationService? localNotificationService,
+    FcmTokenStorage? fcmTokenStorage,
+    TokenStorage? tokenStorage,
+    GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey,
   }) : _notificationService = notificationService ?? NotificationService(),
        _eventBus = eventBus ?? AppEventBus(),
-       _updateFcmTokenUseCase =
-           updateFcmTokenUseCase ??
-           UpdateFcmTokenUseCase(FcmTokenRepositoryImpl());
+       _localNotificationService =
+           localNotificationService ?? LocalNotificationService(),
+       _fcmTokenStorage = fcmTokenStorage ?? FcmTokenStorage(),
+       _tokenStorage = tokenStorage ?? TokenStorage(),
+       _scaffoldMessengerKey = scaffoldMessengerKey;
 
   final NotificationService _notificationService;
   final AppEventBus _eventBus;
-  final UpdateFcmTokenUseCase _updateFcmTokenUseCase;
+  final LocalNotificationService _localNotificationService;
+  final FcmTokenStorage _fcmTokenStorage;
+  final TokenStorage _tokenStorage;
+  final GlobalKey<ScaffoldMessengerState>? _scaffoldMessengerKey;
 
   String? currentFcmToken;
   bool _isInitialized = false;
+  bool _listenersAttached = false;
+  bool _isSyncingToken = false;
 
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedAppSubscription;
-  StreamSubscription<String>? _tokenRefreshSubscription;
 
-  /// 1. التشغيل المبدئي واستدعاء التوكن
+  /// Called once from [main] during app startup.
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    // طلب صلاحيات الإشعارات من المستخدم (مهم جداً للـ iOS والـ Android 13+)
-    NotificationSettings settings = await FirebaseMessaging.instance
-        .requestPermission(alert: true, badge: true, sound: true);
+    await _localNotificationService.initialize();
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      debugPrint('User granted notification permissions.');
+    final settings = await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
 
-      // جلب التوكن الحالي وإرساله للباك اند
-      String? token = await FirebaseMessaging.instance.getToken();
-      currentFcmToken = token;
-      debugPrint('FCM TOKEN: $token');
+    debugPrint(
+      'FCM permission status: ${settings.authorizationStatus.name}',
+    );
 
-      if (token != null) {
-        debugPrint('FCM token obtained: $token');
-        await _sendTokenToServer(token);
-      } else {
-        debugPrint('FCM token is null after initialization.');
-      }
+    _attachListenersOnce();
 
-      // الاستماع في حال تحديث التوكن تلقائياً (Token Lifecycle)
-      _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh
-          .listen((newToken) async {
-            currentFcmToken = newToken;
-            await _sendTokenToServer(newToken);
-          });
-
-      // إعداد المستمعين للحالات المختلفة
-      _setupNotificationListeners();
-      _isInitialized = true;
-    } else {
-      debugPrint('Notification permission was not granted.');
+    currentFcmToken = await FirebaseMessaging.instance.getToken();
+    if (kDebugMode) {
+      debugPrint('========== FCM TOKEN (debug) ==========');
+      debugPrint(currentFcmToken ?? 'null');
+      debugPrint('=======================================');
     }
+
+    _isInitialized = true;
+  }
+
+  void _attachListenersOnce() {
+    if (_listenersAttached) return;
+    _listenersAttached = true;
+
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      currentFcmToken = newToken;
+      if (kDebugMode) {
+        debugPrint('FCM TOKEN refreshed: $newToken');
+      }
+      unawaited(_sendTokenToServerIfChanged(newToken));
+    });
+
+    _setupNotificationListeners();
   }
 
   Future<String?> getToken() async {
@@ -73,50 +89,83 @@ class NotificationManager {
     return currentFcmToken;
   }
 
-  /// يُستدعى بعد نجاح تسجيل الدخول لإعادة دفع التوكن للسيرفر
-  /// (التوكن قد يكون موجود فعلاً ولكن لم يُرسل بسبب 401 قبل الـ login).
+  /// Sync the device FCM token with the backend after the user is authenticated.
   Future<void> syncTokenWithServer() async {
+    if (!await _hasAuthenticatedSession()) {
+      debugPrint('Skipping FCM sync: user is not authenticated.');
+      return;
+    }
+
     final token = await getToken();
     if (token == null || token.trim().isEmpty) {
       debugPrint('Skipping FCM sync: no token available.');
       return;
     }
-    await _sendTokenToServer(token);
+
+    await _sendTokenToServerIfChanged(token);
   }
 
-  /// دالة داخلية لإرسال التوكن عبر الـ Service
-  Future<void> _sendTokenToServer(String token) async {
-    if (token.trim().isEmpty) {
+  Future<bool> _hasAuthenticatedSession() async {
+    return _tokenStorage.hasToken();
+  }
+
+  Future<void> _sendTokenToServerIfChanged(String token) async {
+    final trimmed = token.trim();
+    if (trimmed.isEmpty) {
       debugPrint('Skipping empty FCM token sync.');
       return;
     }
 
+    if (!await _hasAuthenticatedSession()) {
+      debugPrint('Skipping FCM sync: no auth session.');
+      return;
+    }
+
+    final cached = await _fcmTokenStorage.getLastSyncedToken();
+    if (cached == trimmed) {
+      if (kDebugMode) {
+        debugPrint('FCM token unchanged — skipping backend sync.');
+      }
+      return;
+    }
+
+    if (_isSyncingToken) return;
+    _isSyncingToken = true;
     try {
-      final backend = BackendService();
-      final currentUser =
-          backend.currentUser ?? await backend.fetchCurrentUser();
-      await _updateFcmTokenUseCase.call(userId: currentUser.id, token: token);
-      await _notificationService.updateFcmToken(token);
-      debugPrint('FCM Token successfully synced with backend: $token');
+      await _notificationService.updateFcmToken(trimmed);
+      await _fcmTokenStorage.saveLastSyncedToken(trimmed);
+      debugPrint('FCM token successfully synced with backend.');
     } catch (e) {
-      debugPrint('Failed to sync FCM Token with backend: $e');
+      debugPrint('Failed to sync FCM token with backend: $e');
+    } finally {
+      _isSyncingToken = false;
     }
   }
 
-  /// 2. إدارة الـ 3 حالات للـ Notifications
   void _setupNotificationListeners() {
+    _foregroundSubscription?.cancel();
+    _openedAppSubscription?.cancel();
+
     _foregroundSubscription = FirebaseMessaging.onMessage.listen((message) {
       debugPrint('Received a message in the FOREGROUND!');
 
-      // هنا الـ OS لن يظهر بنر علوي، يجب عليك إظهار UI مخصص يدوياً
-      if (message.notification != null) {
-        _showInAppNotification(
-          message.notification!.title ?? '',
-          message.notification!.body ?? '',
+      final title = message.notification?.title ??
+          message.data['title']?.toString() ??
+          '';
+      final body = message.notification?.body ??
+          message.data['body']?.toString() ??
+          '';
+
+      if (title.isNotEmpty || body.isNotEmpty) {
+        unawaited(
+          _showForegroundNotification(
+            title: title,
+            body: body,
+            data: message.data,
+          ),
         );
       }
 
-      // فحص البيانات المخفية
       _handleDataPayload(message.data);
     });
 
@@ -137,7 +186,6 @@ class NotificationManager {
     });
   }
 
-  /// 3. التعامل مع الـ Hidden Payload (الأوامر الصامتة)
   void _handleDataPayload(Map<String, dynamic> data) {
     debugPrint('Processing notification data payload: $data');
 
@@ -154,23 +202,37 @@ class NotificationManager {
     }
   }
 
-  /// دالة لإظهار بنر أو Snackbar داخلي مخصص لو الأبلكيشن مفتوح
-  void _showInAppNotification(String title, String body) {
-    debugPrint('SHOW LOCAL UI BANNER -> Title: $title | Body: $body');
+  Future<void> _showForegroundNotification({
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+  }) async {
+    debugPrint('SHOW FOREGROUND NOTIFICATION -> Title: $title | Body: $body');
+
+    final messenger = _scaffoldMessengerKey?.currentState;
+    if (messenger != null && body.isNotEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            title.isEmpty ? body : '$title\n$body',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+
+    await _localNotificationService.showNotification(
+      title: title,
+      body: body,
+      payload: data,
+    );
   }
 
   Future<void> logoutCleanup() async {
-    await _cancelSubscriptions();
-    _isInitialized = false;
+    await _fcmTokenStorage.clearLastSyncedToken();
     currentFcmToken = null;
-  }
-
-  Future<void> _cancelSubscriptions() async {
-    await _foregroundSubscription?.cancel();
-    await _openedAppSubscription?.cancel();
-    await _tokenRefreshSubscription?.cancel();
-    _foregroundSubscription = null;
-    _openedAppSubscription = null;
-    _tokenRefreshSubscription = null;
   }
 }

@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'package:glider/domain/entities/live_ride_update.dart';
 import 'package:glider/domain/entities/ride.dart';
 import 'package:glider/domain/entities/scooter.dart';
 import 'package:glider/domain/entities/user.dart';
 import 'package:glider/data/repositories/backend_service.dart';
+import 'package:glider/data/services/websocket_service.dart';
 import 'geofence_service.dart';
 import 'iot_service.dart';
 import 'package:glider/data/services/scooter_service.dart';
@@ -74,15 +77,19 @@ class RideService {
   final ScooterService _scooterService = ScooterService();
   final IoTService _iot = IoTService();
   final GeofenceService _geofence = GeofenceService();
+  final WebSocketService _webSocket = WebSocketService();
 
   static const double pricePerMinute = 1.0; // EGP per minute
   static const double minimumWalletToStart = 10.0; // EGP
 
   Ride? _currentRide;
   AppUser? _userSnapshot;
+  Scooter? _activeScooter;
   Timer? _tickTimer;
+  StreamSubscription<LiveRideUpdate>? _webSocketSubscription;
   Duration _duration = Duration.zero;
   double _distanceKm = 0;
+  double _liveCost = 0;
   int _batteryPercent = 80;
   late LatLng _scooterPosition;
   late LatLng _userPosition;
@@ -143,6 +150,7 @@ class RideService {
 
     await _scooterService.unlockScooter(scooter.id);
     _currentRide = ride;
+    _activeScooter = scooter;
 
     _scooterPosition = initialPosition;
     _userPosition = _scooterPosition;
@@ -155,10 +163,12 @@ class RideService {
     );
     _duration = DateTime.now().difference(ride.startedAt);
     _distanceKm = 0;
+    _liveCost = 0;
     _lowBalance = false;
     _outsideGeofence = false;
     _secondsOutsideGeofence = 0;
 
+    await _startLiveUpdates(ride.id, scooter);
     _emitState(isActive: true);
 
     _tickTimer?.cancel();
@@ -171,9 +181,6 @@ class RideService {
 
   Future<void> restoreActiveRide(Ride activeRide, AppUser currentUser) async {
     if (_currentRide != null) return;
-
-    _currentRide = activeRide;
-    _userSnapshot = currentUser;
 
     Scooter? scooter;
     try {
@@ -188,6 +195,10 @@ class RideService {
     } catch (_) {
       scooter = null;
     }
+
+    _currentRide = activeRide;
+    _userSnapshot = currentUser;
+    _activeScooter = scooter;
 
     final initialPosition = (scooter != null && scooter.hasCoordinates)
         ? LatLng(scooter.lat, scooter.lng)
@@ -204,10 +215,12 @@ class RideService {
     _batteryPercent = scooter?.batteryPercent ?? 80;
     _duration = DateTime.now().difference(activeRide.startedAt);
     _distanceKm = activeRide.distanceKm;
+    _liveCost = activeRide.cost;
     _lowBalance = false;
     _outsideGeofence = false;
     _secondsOutsideGeofence = 0;
 
+    await _startLiveUpdates(activeRide.id, scooter);
     _emitState(isActive: true);
 
     _tickTimer?.cancel();
@@ -216,30 +229,90 @@ class RideService {
     });
   }
 
-  void _onTick([Scooter? scooter]) async {
+  Future<void> _startLiveUpdates(String rideId, Scooter? scooter) async {
+    await _webSocketSubscription?.cancel();
+    _webSocketSubscription = null;
+
+    try {
+      await _webSocket.connect(rideId: rideId);
+      _webSocketSubscription = _webSocket.updates.listen(
+        (update) => _applyLiveRideUpdate(update, scooter),
+        onError: (_) {},
+      );
+    } catch (error) {
+      // Fall back to local polling when the WebSocket endpoint is unavailable.
+    }
+  }
+
+  void _applyLiveRideUpdate(LiveRideUpdate update, Scooter? scooter) {
     if (_currentRide == null) return;
 
-    _duration = DateTime.now().difference(_currentRide!.startedAt);
-
-    final LatLng newPos = scooter != null
-        ? await _scooterService.getScooterLocation(
-            scooter.id,
-            fallback: _scooterPosition,
-          )
-        : _scooterPosition;
-
-    if (scooter != null) {
-      _distanceKm += _incrementalDistance(_scooterPosition, newPos);
+    final lat = update.scooterLatitude;
+    final lng = update.scooterLongitude;
+    if (lat != null && lng != null) {
+      final newPos = LatLng(lat, lng);
+      if (_route.isNotEmpty) {
+        _distanceKm += _incrementalDistance(_scooterPosition, newPos);
+      }
       _scooterPosition = newPos;
       _route.add(newPos);
-      _batteryPercent = await _scooterService.getScooterBattery(
-        scooter.id,
-        initial: scooter.batteryPercent,
-      );
       _userPosition = LatLng(
         _scooterPosition.latitude + 0.0001,
         _scooterPosition.longitude + 0.0001,
       );
+    }
+
+    final durationMinutes = update.currentDurationMinutes;
+    if (durationMinutes != null) {
+      _duration = Duration(
+        milliseconds: (durationMinutes * 60 * 1000).round(),
+      );
+    }
+
+    if (update.currentCost != null) {
+      _liveCost = update.currentCost!;
+    }
+
+    if (update.batteryLevel != null) {
+      _batteryPercent = update.batteryLevel!;
+    } else if (scooter != null) {
+      unawaited(
+        _scooterService
+            .getScooterBattery(scooter.id, initial: scooter.batteryPercent)
+            .then((value) => _batteryPercent = value),
+      );
+    }
+
+    _emitState(isActive: true);
+  }
+
+  void _onTick([Scooter? scooter]) async {
+    if (_currentRide == null) return;
+
+    if (!_webSocket.isConnected) {
+      _duration = DateTime.now().difference(_currentRide!.startedAt);
+
+      final activeScooter = scooter ?? _activeScooter;
+      final LatLng newPos = activeScooter != null
+          ? await _scooterService.getScooterLocation(
+              activeScooter.id,
+              fallback: _scooterPosition,
+            )
+          : _scooterPosition;
+
+      if (activeScooter != null) {
+        _distanceKm += _incrementalDistance(_scooterPosition, newPos);
+        _scooterPosition = newPos;
+        _route.add(newPos);
+        _batteryPercent = await _scooterService.getScooterBattery(
+          activeScooter.id,
+          initial: activeScooter.batteryPercent,
+        );
+        _userPosition = LatLng(
+          _scooterPosition.latitude + 0.0001,
+          _scooterPosition.longitude + 0.0001,
+        );
+      }
     }
 
     final cost = calculateRideCost();
@@ -281,6 +354,9 @@ class RideService {
   double _degToRad(double deg) => deg * math.pi / 180.0;
 
   double calculateRideCost() {
+    if (_liveCost > 0 && _webSocket.isConnected) {
+      return _liveCost;
+    }
     final minutes = _duration.inSeconds / 60.0;
     return minutes * pricePerMinute;
   }
@@ -306,6 +382,7 @@ class RideService {
   Future<Ride> endRide({
     double? userLatitude,
     double? userLongitude,
+    Uint8List? endPhotoBytes,
     String endPhotoUrl = '',
   }) async {
     final ride = _currentRide;
@@ -315,10 +392,14 @@ class RideService {
 
     _tickTimer?.cancel();
     _tickTimer = null;
+    await _webSocketSubscription?.cancel();
+    _webSocketSubscription = null;
+    await _webSocket.disconnect();
 
     final completedRide = await _backend.endActiveRide(
       userLatitude: userLatitude ?? _userPosition.latitude,
       userLongitude: userLongitude ?? _userPosition.longitude,
+      endPhotoBytes: endPhotoBytes,
       endPhotoUrl: endPhotoUrl,
     );
     _userSnapshot = await _backend.fetchCurrentUser();
@@ -330,6 +411,8 @@ class RideService {
     await _scooterService.lockScooter(scooter?.id ?? ride.scooterCode);
 
     _currentRide = null;
+    _activeScooter = null;
+    _liveCost = 0;
     _emitState(isActive: false);
 
     return completedRide;
@@ -342,6 +425,8 @@ class RideService {
 
   void dispose() {
     _tickTimer?.cancel();
+    _webSocketSubscription?.cancel();
+    _webSocket.dispose();
     _stateController.close();
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
+
 class RegisterProgressIndicator extends StatelessWidget {
   const RegisterProgressIndicator({
     required this.currentStep,
@@ -10,6 +12,8 @@ class RegisterProgressIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -18,17 +22,26 @@ class RegisterProgressIndicator extends StatelessWidget {
             Expanded(
               child: _StepNode(
                 index: 1,
-                title: 'Account Details',
+                title: l10n.accountDetails,
                 isActive: currentStep >= 1,
                 isComplete: currentStep > 1,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: _StepNode(
                 index: 2,
-                title: 'ID Verification',
+                title: l10n.idVerification,
                 isActive: currentStep >= 2,
+                isComplete: currentStep > 2,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _StepNode(
+                index: 3,
+                title: l10n.selfieVerification,
+                isActive: currentStep >= 3,
                 isComplete: false,
               ),
             ),
@@ -36,7 +49,7 @@ class RegisterProgressIndicator extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         LinearProgressIndicator(
-          value: currentStep / 2,
+          value: currentStep / 3,
           minHeight: 8,
           borderRadius: BorderRadius.circular(999),
           backgroundColor: const Color(0xFFE5E7EB),
@@ -67,33 +80,36 @@ class _StepNode extends StatelessWidget {
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 220),
-          height: 34,
-          width: 34,
+          height: 30,
+          width: 30,
           decoration: BoxDecoration(
             color: isActive ? color : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: color),
           ),
           child: Center(
             child: isComplete
-                ? const Icon(Icons.check, size: 18, color: Colors.white)
+                ? const Icon(Icons.check, size: 16, color: Colors.white)
                 : Text(
                     '$index',
                     style: TextStyle(
                       color: isActive ? Colors.white : color,
                       fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
                   ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 6),
         Expanded(
           child: Text(
             title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: const Color(0xFF111827),
-                  fontSize: 15,
-                ),
+              color: const Color(0xFF111827),
+              fontSize: 12,
+            ),
           ),
         ),
       ],

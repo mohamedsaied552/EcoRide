@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/topup_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/screens/topup_payment_screen.dart';
@@ -13,13 +14,13 @@ class TopUpScreen extends StatefulWidget {
 }
 
 class _TopUpScreenState extends State<TopUpScreen> {
-  static const walletMethod = 'Mobile Wallet';
+  static const walletMethodId = 'mobile_wallet';
 
   final TextEditingController _amountController = TextEditingController(
     text: '50',
   );
   final TextEditingController _phoneController = TextEditingController();
-  String _selectedMethod = walletMethod;
+  String _selectedMethodId = walletMethodId;
   bool _isNavigatingToPayment = false;
 
   @override
@@ -30,23 +31,24 @@ class _TopUpScreenState extends State<TopUpScreen> {
   }
 
   void _submitPayment() {
+    final l10n = AppLocalizations.of(context);
     final amount = double.tryParse(_amountController.text) ?? 0;
     final phoneNumber = _phoneController.text.trim();
 
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid amount.'),
+        SnackBar(
+          content: Text(l10n.enterValidAmount),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    if (_selectedMethod == walletMethod && phoneNumber.isEmpty) {
+    if (_selectedMethodId == walletMethodId && phoneNumber.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your wallet phone number.'),
+        SnackBar(
+          content: Text(l10n.enterWalletPhone),
           backgroundColor: Colors.red,
         ),
       );
@@ -59,23 +61,24 @@ class _TopUpScreenState extends State<TopUpScreen> {
     );
   }
 
-  void _selectMethod(String method) {
-    if (method == walletMethod) {
+  void _selectMethod(String methodId) {
+    if (methodId == walletMethodId) {
       setState(() {
-        _selectedMethod = method;
+        _selectedMethodId = methodId;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final paymentMethods = <Map<String, dynamic>>[
-      {'label': walletMethod, 'enabled': true},
-      {'label': 'Visa / MasterCard', 'enabled': false},
-      {'label': 'Vodafone Cash', 'enabled': false},
-      {'label': 'Orange Cash', 'enabled': false},
-      {'label': 'Etisalat Cash', 'enabled': false},
-      {'label': 'Instapay', 'enabled': false},
+      {'id': walletMethodId, 'label': l10n.mobileWallet, 'enabled': true},
+      {'id': 'visa', 'label': l10n.visaMastercard, 'enabled': false},
+      {'id': 'vodafone', 'label': l10n.vodafoneCash, 'enabled': false},
+      {'id': 'orange', 'label': l10n.orangeCash, 'enabled': false},
+      {'id': 'etisalat', 'label': l10n.etisalatCash, 'enabled': false},
+      {'id': 'instapay', 'label': l10n.instapay, 'enabled': false},
     ];
 
     return BlocListener<TopUpCubit, TopUpState>(
@@ -86,8 +89,8 @@ class _TopUpScreenState extends State<TopUpScreen> {
           final redirectUrl = state.redirectUrl;
           if (redirectUrl == null || redirectUrl.isEmpty) {
             messenger.showSnackBar(
-              const SnackBar(
-                content: Text('Unable to open payment gateway.'),
+              SnackBar(
+                content: Text(l10n.unableOpenPayment),
                 backgroundColor: Colors.red,
               ),
             );
@@ -112,20 +115,14 @@ class _TopUpScreenState extends State<TopUpScreen> {
           _isNavigatingToPayment = false;
           await userCubit.loadCurrentUser();
 
-          // Show result to user — true indicates success, false indicates
-          // cancellation/failure. If null, treat as unknown/successful.
           if (mounted) {
             if (finished == null || finished == true) {
               messenger.showSnackBar(
-                const SnackBar(
-                  content: Text('Payment completed — refreshing balance.'),
-                ),
+                SnackBar(content: Text(l10n.paymentCompleted)),
               );
             } else {
               messenger.showSnackBar(
-                const SnackBar(
-                  content: Text('Payment was cancelled or failed.'),
-                ),
+                SnackBar(content: Text(l10n.paymentCancelled)),
               );
             }
           }
@@ -143,7 +140,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
       child: BlocBuilder<TopUpCubit, TopUpState>(
         builder: (context, state) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Add Balance')),
+            appBar: AppBar(title: Text(l10n.addBalance)),
             body: Stack(
               children: [
                 SingleChildScrollView(
@@ -152,29 +149,30 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Enter amount',
+                        l10n.enterAmount,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _amountController,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          prefixText: 'EGP ',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          prefixText: l10n.egpPrefix,
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Choose payment method',
+                        l10n.choosePaymentMethod,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
                       Column(
                         children: paymentMethods.map((method) {
+                          final id = method['id'] as String;
                           final label = method['label'] as String;
                           final enabled = method['enabled'] as bool;
-                          final selected = label == _selectedMethod;
+                          final selected = id == _selectedMethodId;
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: SizedBox(
@@ -182,7 +180,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
                               height: 52,
                               child: OutlinedButton(
                                 onPressed: enabled
-                                    ? () => _selectMethod(label)
+                                    ? () => _selectMethod(id)
                                     : null,
                                 style: OutlinedButton.styleFrom(
                                   backgroundColor: selected
@@ -218,19 +216,19 @@ class _TopUpScreenState extends State<TopUpScreen> {
                           );
                         }).toList(),
                       ),
-                      if (_selectedMethod == walletMethod) ...[
+                      if (_selectedMethodId == walletMethodId) ...[
                         const SizedBox(height: 24),
                         Text(
-                          'Wallet phone number',
+                          l10n.walletPhoneNumber,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(
-                            hintText: '010XXXXXXXX',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            hintText: l10n.phoneHint,
+                            border: const OutlineInputBorder(),
                           ),
                         ),
                       ],
@@ -251,9 +249,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text(
-                                  'Top-up / Pay',
-                                  style: TextStyle(
+                              : Text(
+                                  l10n.topUpPay,
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),

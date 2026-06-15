@@ -17,6 +17,7 @@ import 'package:glider/presentation/cubits/map_cubit.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/domain/entities/scooter.dart';
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/widgets/app_user_drawer.dart';
 import 'package:glider/presentation/widgets/loading_spinner.dart';
 
@@ -101,6 +102,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _launchGoogleMapsNavigation(double lat, double lng) async {
+    final l10n = AppLocalizations.of(context);
     final urlString =
         'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=walking';
     final uri = Uri.parse(urlString);
@@ -110,9 +112,7 @@ class _MapScreenState extends State<MapScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open Google Maps on this device.'),
-            ),
+            SnackBar(content: Text(l10n.couldNotOpenMaps)),
           );
         }
         debugPrint('Cannot launch maps URL: $uri');
@@ -121,7 +121,7 @@ class _MapScreenState extends State<MapScreen> {
       debugPrint('Error launching maps: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error opening navigation.')),
+          SnackBar(content: Text(l10n.errorOpeningNavigation)),
         );
       }
     }
@@ -154,13 +154,12 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _goToMyLocation() async {
+    final l10n = AppLocalizations.of(context);
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location services are disabled. Please enable GPS.'),
-          ),
+          SnackBar(content: Text(l10n.locationDisabled)),
         );
       }
       return;
@@ -170,11 +169,7 @@ class _MapScreenState extends State<MapScreen> {
     if (!permissionGranted) {
       if (_cachedPermission == LocationPermission.deniedForever && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Location permissions are permanently denied. Enable it from settings.',
-            ),
-          ),
+          SnackBar(content: Text(l10n.locationPermanentlyDenied)),
         );
       }
       return;
@@ -298,6 +293,8 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return BlocProvider.value(
       value: _mapCubit,
       child: BlocBuilder<UserCubit, UserState>(
@@ -419,7 +416,7 @@ class _MapScreenState extends State<MapScreen> {
 
               return Scaffold(
                 appBar: AppBar(
-                  title: const Text('Nearby Scooters'),
+                  title: Text(l10n.nearbyScooters),
                   actions: [
                     IconButton(
                       onPressed: () {
@@ -441,11 +438,11 @@ class _MapScreenState extends State<MapScreen> {
                   children: [
                     mapWidget,
                     if (mapState.status == MapStatus.loading)
-                      const Positioned.fill(
+                      Positioned.fill(
                         child: ColoredBox(
-                          color: Color(0xAAFFFFFF),
+                          color: const Color(0xAAFFFFFF),
                           child: LoadingSpinner(
-                            message: 'Finding nearby scooters...',
+                            message: l10n.findingNearbyScooters,
                           ),
                         ),
                       ),
@@ -500,7 +497,7 @@ class _MapScreenState extends State<MapScreen> {
                                     height: 48,
                                     child: ElevatedButton.icon(
                                       icon: const Icon(Icons.qr_code),
-                                      label: const Text('Scan to unlock'),
+                                      label: Text(l10n.scanToUnlock),
                                       onPressed: () {
                                         context.read<RideCubit>().reset();
                                         Navigator.push(
@@ -556,6 +553,7 @@ Widget _buildScooterDetailsSheet(
   Scooter scooter,
   LatLng? userPosition,
 ) {
+  final l10n = AppLocalizations.of(context);
   final double? distanceInMeters = userPosition != null
       ? const Distance().as(
           LengthUnit.Meter,
@@ -565,9 +563,9 @@ Widget _buildScooterDetailsSheet(
       : null;
   final String distanceLabel = distanceInMeters != null
       ? (distanceInMeters >= 1000
-            ? '${(distanceInMeters / 1000).toStringAsFixed(1)} km'
-            : '${distanceInMeters.toStringAsFixed(0)} m')
-      : 'Unknown';
+            ? l10n.distanceKm((distanceInMeters / 1000).toStringAsFixed(1))
+            : l10n.distanceM(distanceInMeters.toStringAsFixed(0)))
+      : l10n.unknown;
   final double? feePerMinute = scooter.feePerMinute;
   final double? unlockFee = scooter.unlockFee;
   final String scooterModel = scooter.modelName ?? scooter.code;
@@ -579,7 +577,7 @@ Widget _buildScooterDetailsSheet(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Scooter Details',
+          l10n.scooterDetails,
           style: Theme.of(
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -590,31 +588,31 @@ Widget _buildScooterDetailsSheet(
         _buildDetailRow(
           icon: Icons.battery_charging_full,
           iconColor: Colors.green,
-          title: 'Battery',
-          value: '${scooter.batteryPercent}%',
+          title: l10n.battery,
+          value: l10n.percentSuffix('${scooter.batteryPercent}'),
         ),
         const SizedBox(height: 16),
         _buildDetailRow(
           icon: Icons.location_on,
           iconColor: Colors.redAccent,
-          title: 'Distance',
+          title: l10n.distance,
           value: distanceLabel,
         ),
         const SizedBox(height: 16),
         _buildDetailRow(
           icon: Icons.timer,
           iconColor: Colors.blue,
-          title: 'Rate',
+          title: l10n.rate,
           value: feePerMinute != null
-              ? '${feePerMinute.toStringAsFixed(2)} / min'
-              : 'TBD',
+              ? l10n.feePerMin(feePerMinute.toStringAsFixed(2))
+              : l10n.tbd,
         ),
         if (unlockFee != null) ...[
           const SizedBox(height: 16),
           _buildDetailRow(
             icon: Icons.lock_open,
             iconColor: Colors.orange,
-            title: 'Unlock Fee',
+            title: l10n.unlockFee,
             value: unlockFee.toStringAsFixed(2),
           ),
         ],
@@ -624,14 +622,14 @@ Widget _buildScooterDetailsSheet(
           height: 48,
           child: ElevatedButton.icon(
             icon: const Icon(Icons.navigation),
-            label: const Text('Direct Me'),
+            label: Text(l10n.directMe),
             onPressed: () {
               final state = context.findAncestorStateOfType<_MapScreenState>();
               if (state != null) {
                 state._launchGoogleMapsNavigation(scooter.lat, scooter.lng);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Unable to open navigation.')),
+                  SnackBar(content: Text(l10n.unableOpenNavigation)),
                 );
               }
             },

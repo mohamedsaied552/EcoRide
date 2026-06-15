@@ -1,4 +1,6 @@
 ﻿import 'package:flutter/material.dart';
+
+import 'package:glider/l10n/app_localizations.dart';
 import 'login_screen.dart';
 
 class OnboardingScreen extends StatelessWidget {
@@ -6,6 +8,8 @@ class OnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -31,8 +35,8 @@ class OnboardingScreen extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
                     },
-                    child: const Text('Skip'),
-                  )
+                    child: Text(l10n.skip),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -41,13 +45,12 @@ class OnboardingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
               Text(
-                "Easy & Smart E‑Scooter Sharing",
+                l10n.onboardingTitle,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
               Text(
-                "Find nearby scooters, unlock with a QR scan, and ride in seconds."
-                " Pay securely and track every ride in one place.",
+                l10n.onboardingSubtitle,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const Spacer(),
@@ -61,7 +64,7 @@ class OnboardingScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const LoginScreen()),
                     );
                   },
-                  child: const Text("Get Started"),
+                  child: Text(l10n.getStarted),
                 ),
               ),
               const SizedBox(height: 10),

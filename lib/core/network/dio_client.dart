@@ -30,11 +30,15 @@ class DioClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await _tokenStorage.getAccessToken();
-          if (!_isPublicEndpoint(options.path) &&
-              token != null &&
-              token.trim().isNotEmpty) {
+          final isPublic = _isPublicEndpoint(options.path);
+          if (!isPublic && token != null && token.trim().isNotEmpty) {
             options.headers['Authorization'] =
-                '${AppConstants.bearerPrefix} $token';
+                '${AppConstants.bearerPrefix} ${token.trim()}';
+          } else if (!isPublic && kDebugMode) {
+            debugPrint(
+              'API WARNING: Missing auth token for protected request '
+              '${options.method} ${options.path}',
+            );
           }
           _logRequest(options);
           handler.next(options);
@@ -114,12 +118,10 @@ class DioClient {
   }
 
   bool _isPublicEndpoint(String path) {
-    return path == '/Auth/login' ||
-        path == '/Auth/register' ||
-        path == '/Auth/forgot-password' ||
-        path == '/Auth/reset-password' ||
-        path == '/Auth/verify-email' ||
-        path == '/Auth/resend-otp';
+    final normalized = path.split('?').first;
+    return normalized == '/Auth/login' ||
+        normalized == '/Auth/register' ||
+        normalized == '/Auth/reset-password';
   }
 
   void _logRequest(RequestOptions options) {

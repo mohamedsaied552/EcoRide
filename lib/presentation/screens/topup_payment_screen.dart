@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:glider/core/constants/app_constants.dart';
+import 'package:glider/l10n/app_localizations.dart';
 
 class TopUpPaymentScreen extends StatefulWidget {
   const TopUpPaymentScreen({super.key, required this.redirectUrl});
@@ -38,9 +39,6 @@ class _TopUpPaymentScreenState extends State<TopUpPaymentScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (request) {
-            // Only intercept navigations that return to our backend host
-            // (ngrok or production). Do NOT intercept Paymob or other
-            // intermediate hosts so the user can complete checkout.
             try {
               final reqUri = Uri.parse(request.url);
               if (backendHost != null && reqUri.host == backendHost) {
@@ -48,9 +46,7 @@ class _TopUpPaymentScreenState extends State<TopUpPaymentScreen> {
                 if (mounted) Navigator.of(context).pop(finished);
                 return NavigationDecision.prevent;
               }
-            } catch (_) {
-              // If parsing fails, do not intercept.
-            }
+            } catch (_) {}
             return NavigationDecision.navigate;
           },
           onPageStarted: (_) {
@@ -80,9 +76,6 @@ class _TopUpPaymentScreenState extends State<TopUpPaymentScreen> {
   }
 
   bool _isSuccessFromCallback(Uri uri) {
-    // Heuristic: check common query params or path fragments used by payment
-    // callbacks. If nothing obvious is present, treat as success to let the
-    // app refresh user state and verify on the backend.
     final q = uri.queryParameters;
     final successCandidates = <String>['success', 'status', 'result'];
     for (final key in successCandidates) {
@@ -116,9 +109,11 @@ class _TopUpPaymentScreenState extends State<TopUpPaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Complete Payment'),
+        title: Text(l10n.completePayment),
         actions: [
           IconButton(
             icon: const Icon(Icons.close),

@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:glider/config/app_config.dart';
 import 'package:glider/core/location/location_accuracy_validator.dart';
 import 'package:glider/data/services/ride_service.dart';
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/widgets/map_unavailable_card.dart';
 
 class RideScreen extends StatefulWidget {
@@ -37,17 +38,14 @@ class _RideScreenState extends State<RideScreen> {
           CameraUpdate.newLatLng(event.scooterPosition),
         );
       }
+      final l10n = AppLocalizations.of(context);
       if (event.lowBalance) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Wallet balance is low. Ending ride for safety.'),
-          ),
+          SnackBar(content: Text(l10n.walletBalanceLow)),
         );
       } else if (event.outsideGeofence) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Outside operating zone. Please return to the zone.'),
-          ),
+          SnackBar(content: Text(l10n.outsideOperatingZone)),
         );
       }
     });
@@ -91,6 +89,7 @@ class _RideScreenState extends State<RideScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = _state;
     if (state == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -140,7 +139,7 @@ class _RideScreenState extends State<RideScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Active Ride')),
+      appBar: AppBar(title: Text(l10n.activeRide)),
       body: Stack(
         children: [
           AppConfig.hasGoogleMapsApiKey
@@ -155,10 +154,7 @@ class _RideScreenState extends State<RideScreen> {
                   myLocationButtonEnabled: false,
                   onMapCreated: (controller) => _mapController = controller,
                 )
-              : const MapUnavailableCard(
-                  message:
-                      'Live map is unavailable until a Google Maps API key is configured.',
-                ),
+              : MapUnavailableCard(message: l10n.mapUnavailable),
           Positioned(
             left: 16,
             right: 16,
@@ -176,9 +172,9 @@ class _RideScreenState extends State<RideScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Ride time',
-                              style: TextStyle(color: Colors.grey),
+                            Text(
+                              l10n.rideTime,
+                              style: const TextStyle(color: Colors.grey),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -193,13 +189,13 @@ class _RideScreenState extends State<RideScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Text(
-                              'Cost',
-                              style: TextStyle(color: Colors.grey),
+                            Text(
+                              l10n.cost,
+                              style: const TextStyle(color: Colors.grey),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${state.cost.toStringAsFixed(1)} EGP',
+                              l10n.costEgp(state.cost.toStringAsFixed(1)),
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700,
@@ -217,7 +213,11 @@ class _RideScreenState extends State<RideScreen> {
                           children: [
                             const Icon(Icons.route, size: 18),
                             const SizedBox(width: 6),
-                            Text('${state.distanceKm.toStringAsFixed(2)} km'),
+                            Text(
+                              l10n.distanceKm(
+                                state.distanceKm.toStringAsFixed(2),
+                              ),
+                            ),
                           ],
                         ),
                         Row(
@@ -230,7 +230,9 @@ class _RideScreenState extends State<RideScreen> {
                                   : const Color(0xFF1FAE6C),
                             ),
                             const SizedBox(width: 6),
-                            Text('${state.batteryPercent}%'),
+                            Text(
+                              l10n.percentSuffix('${state.batteryPercent}'),
+                            ),
                           ],
                         ),
                       ],
@@ -260,13 +262,15 @@ class _RideScreenState extends State<RideScreen> {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Error ending ride: $error'),
+                                content: Text(
+                                  l10n.errorEndingRide('$error'),
+                                ),
                                 backgroundColor: Colors.red,
                               ),
                             );
                           }
                         },
-                        child: const Text('End ride'),
+                        child: Text(l10n.endRide),
                       ),
                     ),
                   ],

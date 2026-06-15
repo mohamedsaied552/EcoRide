@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/topup_cubit.dart';
 import 'package:glider/presentation/screens/active_ride_screen.dart';
 import 'package:glider/presentation/screens/topup_screen.dart';
 import 'package:glider/presentation/widgets/qr_view.dart';
+
+String _localizeScooterStatus(AppLocalizations l10n, String statusLabel) {
+  switch (statusLabel) {
+    case 'Available':
+      return l10n.available;
+    case 'Offline':
+      return l10n.offline;
+    default:
+      return statusLabel;
+  }
+}
 
 class QRScanScreen extends StatefulWidget {
   const QRScanScreen({super.key});
@@ -19,6 +31,8 @@ class _QRScanScreenState extends State<QRScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return BlocListener<RideCubit, RideState>(
       listenWhen: (previous, current) =>
           previous.runtimeType != current.runtimeType,
@@ -53,14 +67,14 @@ class _QRScanScreenState extends State<QRScanScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Scan QR')),
+        appBar: AppBar(title: Text(l10n.scanQr)),
         body: Stack(
           children: [
             QrViewWidget(
               onScan: (code) {
                 if (code == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invalid QR code')),
+                    SnackBar(content: Text(l10n.invalidQrCode)),
                   );
                   return;
                 }
@@ -100,7 +114,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Scan the scooter QR to load its status, wallet check, and proximity confirmation.',
+                          l10n.scanQrInstruction,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
@@ -142,6 +156,8 @@ class _RidePreviewSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
@@ -210,7 +226,9 @@ class _RidePreviewSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '${preview.scooter.batteryPercent}% battery',
+                            l10n.batteryPercent(
+                              '${preview.scooter.batteryPercent}',
+                            ),
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],
@@ -219,30 +237,41 @@ class _RidePreviewSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                _InfoRow(label: 'Status', value: preview.scooter.statusLabel),
                 _InfoRow(
-                  label: 'Wallet',
-                  value:
-                      '${preview.user.walletBalance.toStringAsFixed(0)} EGP / ${preview.minimumRequiredBalance.toStringAsFixed(0)} EGP min',
+                  label: l10n.status,
+                  value: _localizeScooterStatus(
+                    l10n,
+                    preview.scooter.statusLabel,
+                  ),
                 ),
                 _InfoRow(
-                  label: 'Distance',
+                  label: l10n.wallet,
+                  value: l10n.walletBalanceMin(
+                    preview.user.walletBalance.toStringAsFixed(0),
+                    preview.minimumRequiredBalance.toStringAsFixed(0),
+                  ),
+                ),
+                _InfoRow(
+                  label: l10n.distance,
                   value: preview.distanceToScooterMeters == null
-                      ? 'Not checked yet'
-                      : '${preview.distanceToScooterMeters!.toStringAsFixed(1)} m / ${preview.allowedUnlockRadiusMeters.toStringAsFixed(0)} m',
+                      ? l10n.notCheckedYet
+                      : l10n.distanceRadius(
+                          preview.distanceToScooterMeters!.toStringAsFixed(1),
+                          preview.allowedUnlockRadiusMeters.toStringAsFixed(0),
+                        ),
                 ),
                 if (state is InsufficientFunds) ...[
                   const SizedBox(height: 12),
-                  const Text(
-                    'Your balance is below the minimum required to unlock this scooter.',
-                    style: TextStyle(color: Colors.red),
+                  Text(
+                    l10n.balanceTooLow,
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ],
                 if (state is ProximityFailure) ...[
                   const SizedBox(height: 12),
-                  const Text(
-                    'Move closer to the scooter and try the proximity check again.',
-                    style: TextStyle(color: Colors.red),
+                  Text(
+                    l10n.moveCloser,
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -264,7 +293,7 @@ class _RidePreviewSheet extends StatelessWidget {
                           await rideCubit.refreshRidePreview();
                         }
                       },
-                      child: const Text('Add Money'),
+                      child: Text(l10n.addMoney),
                     ),
                   )
                 else ...[
@@ -283,7 +312,11 @@ class _RidePreviewSheet extends StatelessWidget {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(withinRange ? 'Start Ride' : 'Check Distance'),
+                          : Text(
+                              withinRange
+                                  ? l10n.startRide
+                                  : l10n.checkDistance,
+                            ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -292,7 +325,7 @@ class _RidePreviewSheet extends StatelessWidget {
                     height: 48,
                     child: OutlinedButton(
                       onPressed: isBusy ? null : rideCubit.refreshRidePreview,
-                      child: const Text('Refresh status'),
+                      child: Text(l10n.refreshStatus),
                     ),
                   ),
                 ],
@@ -307,7 +340,7 @@ class _RidePreviewSheet extends StatelessWidget {
                             rideCubit.reset();
                             Navigator.of(context).pop();
                           },
-                    child: const Text('Scan another scooter'),
+                    child: Text(l10n.scanAnotherScooter),
                   ),
                 ),
               ],

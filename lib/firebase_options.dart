@@ -32,7 +32,6 @@ class DefaultFirebaseOptions {
     }
   }
 
-
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyB5X4L1iIgFOfooBVAz14K6iloFzoMFMz0',
     appId: '1:66760687862:web:04ded129e491b05317acd7',
@@ -51,8 +50,7 @@ class DefaultFirebaseOptions {
     projectId: 'ecoride-1229d',
     databaseURL: 'https://ecoride-1229d-default-rtdb.firebaseio.com',
     storageBucket: 'ecoride-1229d.firebasestorage.app',
-    iosClientId:
-        '66760687862-0rahmcr0pelkhtlfehuoi3bqm1veemve.apps.googleusercontent.com',
+    iosClientId: '66760687862-0rahmcr0pelkhtlfehuoi3bqm1veemve.apps.googleusercontent.com',
     iosBundleId: 'com.glider.scooter',
   );
 
