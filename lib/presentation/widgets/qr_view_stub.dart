@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
 import 'qr_view_types.dart';
 
 class QrViewImpl extends StatelessWidget {
@@ -9,8 +10,10 @@ class QrViewImpl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('QR scanning is not supported on Web.'),
+    final l10n = AppLocalizations.of(context);
+
+    return Center(
+      child: Text(l10n.qrNotSupportedWeb),
     );
   }
 }

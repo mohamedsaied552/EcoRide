@@ -494,10 +494,14 @@ class RideCubit extends Cubit<RideState> {
     return position;
   }
 
-  Future<Ride> endActiveRide() async {
+  Future<Ride> endActiveRide({Uint8List? endPhotoBytes}) async {
     final preview = _previewFromState();
     if (preview == null) {
       throw StateError('No active ride preview available to end.');
+    }
+
+    if (endPhotoBytes == null || endPhotoBytes.isEmpty) {
+      throw StateError('A parking photo is required to end the ride.');
     }
 
     emit(RideEnding(preview: preview));
@@ -507,7 +511,7 @@ class RideCubit extends Cubit<RideState> {
       final ride = await _rideService.endRide(
         userLatitude: position.latitude,
         userLongitude: position.longitude,
-        endPhotoUrl: '',
+        endPhotoBytes: endPhotoBytes,
       );
       emit(const RideInitial());
       return ride;

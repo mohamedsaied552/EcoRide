@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/locale_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/domain/entities/user.dart';
@@ -19,6 +20,7 @@ class AppUserDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final avatarProvider = _avatarProvider(user.avatarUrl);
     return Drawer(
       child: SafeArea(
@@ -66,7 +68,7 @@ class AppUserDrawer extends StatelessWidget {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.person_outline),
-                    title: const Text('Profile'),
+                    title: Text(l10n.profile),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, '/profile');
@@ -74,18 +76,10 @@ class AppUserDrawer extends StatelessWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.account_balance_wallet_outlined),
-                    title: const Text('Wallet'),
+                    title: Text(l10n.wallet),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, '/wallet');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.history),
-                    title: const Text('Ride history'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/history');
                     },
                   ),
                   Padding(
@@ -98,36 +92,41 @@ class AppUserDrawer extends StatelessWidget {
                         color: const Color(0xFF1FAE6C).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: BlocBuilder<LocaleCubit, Locale>(
-                        builder: (context, locale) {
-                          final title = locale.languageCode == 'ar'
-                              ? 'مركز مساعدة'
-                              : 'Help Center';
-                          return ListTile(
-                            leading: const Icon(
-                              Icons.help_outline,
-                              color: Color(0xFF1FAE6C),
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.help_outline,
+                          color: Color(0xFF1FAE6C),
+                        ),
+                        title: Text(
+                          l10n.helpCenter,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          final navigator = Navigator.of(context);
+                          navigator.pop();
+                          navigator.push(
+                            MaterialPageRoute(
+                              builder: (_) => const HelpCenterScreen(),
                             ),
-                            title: Text(
-                              title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () {
-                              final navigator = Navigator.of(context);
-                              navigator.pop();
-                              navigator.push(
-                                MaterialPageRoute(
-                                  builder: (_) => const HelpCenterScreen(),
-                                ),
-                              );
-                            },
                           );
                         },
                       ),
                     ),
+                  ),
+                  BlocBuilder<LocaleCubit, Locale>(
+                    builder: (context, locale) {
+                      final label = context.read<LocaleCubit>().languageLabel();
+                      return ListTile(
+                        leading: const Icon(Icons.language),
+                        title: Text(l10n.language),
+                        subtitle: Text(label),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          context.read<LocaleCubit>().toggleLanguage();
+                        },
+                      );
+                    },
                   ),
                 ],
               ),
@@ -148,7 +147,7 @@ class AppUserDrawer extends StatelessWidget {
                     );
                   },
                   icon: const Icon(Icons.logout),
-                  label: const Text('Logout'),
+                  label: Text(l10n.logout),
                 ),
               ),
             ),

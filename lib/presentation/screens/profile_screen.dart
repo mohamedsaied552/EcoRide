@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/profile_cubit.dart';
-import 'package:glider/presentation/cubits/locale_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/widgets/loading_spinner.dart';
 import 'login_screen.dart';
@@ -40,6 +40,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return BlocProvider(
       create: (_) => ProfileCubit()..load(),
       child: BlocListener<ProfileCubit, ProfileState>(
@@ -73,7 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             return Scaffold(
               appBar: AppBar(
-                title: const Text('Profile'),
+                title: Text(l10n.profile),
                 actions: [
                   TextButton.icon(
                     onPressed: () async {
@@ -87,12 +89,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
                     },
                     icon: const Icon(Icons.logout),
-                    label: const Text('Logout'),
+                    label: Text(l10n.logout),
                   ),
                 ],
               ),
               body: state.status == ProfileStatus.loading
-                  ? const LoadingSpinner(message: 'Loading profile...')
+                  ? LoadingSpinner(message: l10n.loadingProfile)
                   : SingleChildScrollView(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -142,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           icon: const Icon(
                                             Icons.photo_camera_outlined,
                                           ),
-                                          label: const Text('Camera'),
+                                          label: Text(l10n.camera),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -154,7 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           icon: const Icon(
                                             Icons.photo_library_outlined,
                                           ),
-                                          label: const Text('Gallery'),
+                                          label: Text(l10n.gallery),
                                         ),
                                       ),
                                     ],
@@ -165,62 +167,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 16),
                           _SectionCard(
-                            title: 'Preferences',
-                            child: Column(
-                              children: [
-                                BlocBuilder<LocaleCubit, Locale>(
-                                  builder: (context, locale) {
-                                    final label = locale.languageCode == 'en'
-                                        ? 'English'
-                                        : 'العربية';
-                                    return ListTile(
-                                      leading: const Icon(Icons.language),
-                                      title: const Text('Language'),
-                                      subtitle: Text(label),
-                                      trailing: const Icon(Icons.chevron_right),
-                                      onTap: () {
-                                        context
-                                            .read<LocaleCubit>()
-                                            .toggleLanguage();
-                                      },
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _SectionCard(
-                            title: 'Account Information',
+                            title: l10n.accountInformation,
                             child: Form(
                               key: _profileFormKey,
                               child: Column(
                                 children: [
                                   _ProfileField(
                                     controller: _nameController,
-                                    label: 'Full Name',
+                                    label: l10n.fullName,
                                     icon: Icons.person_outline,
                                     onChanged: cubit.updateFullName,
                                     validator: (value) {
                                       if (value == null ||
                                           value.trim().isEmpty) {
-                                        return 'Please enter your name.';
+                                        return l10n.pleaseEnterName;
                                       }
                                       return null;
                                     },
                                   ),
-
                                   const SizedBox(height: 14),
                                   _ProfileField(
                                     controller: _phoneController,
-                                    label: 'Phone Number',
+                                    label: l10n.phoneNumber,
                                     icon: Icons.phone_outlined,
                                     keyboardType: TextInputType.phone,
                                     onChanged: cubit.updatePhone,
                                     validator: (value) {
                                       if (value == null ||
                                           value.trim().isEmpty) {
-                                        return 'Please enter your phone number.';
+                                        return l10n.pleaseEnterPhone;
                                       }
                                       return null;
                                     },
@@ -248,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 strokeWidth: 2,
                                               ),
                                             )
-                                          : const Text('Save profile'),
+                                          : Text(l10n.saveProfile),
                                     ),
                                   ),
                                 ],
@@ -257,20 +232,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 16),
                           _SectionCard(
-                            title: 'Security',
+                            title: l10n.security,
                             child: Form(
                               key: _passwordFormKey,
                               child: Column(
                                 children: [
                                   _ProfileField(
                                     controller: _currentPasswordController,
-                                    label: 'Current Password',
+                                    label: l10n.currentPassword,
                                     icon: Icons.lock_outline,
                                     obscureText: true,
                                     onChanged: cubit.updateCurrentPassword,
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
-                                        return 'Enter your current password.';
+                                        return l10n.enterCurrentPassword;
                                       }
                                       return null;
                                     },
@@ -278,13 +253,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 14),
                                   _ProfileField(
                                     controller: _newPasswordController,
-                                    label: 'New Password',
+                                    label: l10n.newPassword,
                                     icon: Icons.lock_reset_outlined,
                                     obscureText: true,
                                     onChanged: cubit.updateNewPassword,
                                     validator: (value) {
                                       if (value == null || value.length < 8) {
-                                        return 'New password must be at least 8 characters.';
+                                        return l10n.newPasswordMin8;
                                       }
                                       return null;
                                     },
@@ -292,14 +267,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 14),
                                   _ProfileField(
                                     controller: _confirmPasswordController,
-                                    label: 'Confirm New Password',
+                                    label: l10n.confirmNewPassword,
                                     icon: Icons.lock_outline,
                                     obscureText: true,
                                     onChanged: cubit.updateConfirmPassword,
                                     validator: (value) {
                                       if (value !=
                                           _newPasswordController.text) {
-                                        return 'Passwords do not match.';
+                                        return l10n.passwordsDoNotMatch;
                                       }
                                       return null;
                                     },
@@ -329,7 +304,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 strokeWidth: 2,
                                               ),
                                             )
-                                          : const Text('Update password'),
+                                          : Text(l10n.updatePassword),
                                     ),
                                   ),
                                 ],

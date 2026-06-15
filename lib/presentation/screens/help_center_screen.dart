@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
+
 class HelpCenterScreen extends StatelessWidget {
   const HelpCenterScreen({super.key});
 
   static const Color accent = Color(0xFF1FAE6C);
 
   Future<void> _launchWhatsApp(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final uri = Uri.parse('https://wa.me/201004832172');
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -14,18 +17,19 @@ class HelpCenterScreen extends StatelessWidget {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Unable to open WhatsApp.')),
+          SnackBar(content: Text(l10n.helpUnableOpenWhatsApp)),
         );
       }
     } catch (e) {
       debugPrint('Error launching WhatsApp: $e');
       messenger.showSnackBar(
-        const SnackBar(content: Text('Error opening WhatsApp.')),
+        SnackBar(content: Text(l10n.helpErrorOpeningWhatsApp)),
       );
     }
   }
 
   Future<void> _callSupport(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final uri = Uri(scheme: 'tel', path: '+201004832172');
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -33,22 +37,24 @@ class HelpCenterScreen extends StatelessWidget {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Unable to place a call.')),
+          SnackBar(content: Text(l10n.helpUnablePlaceCall)),
         );
       }
     } catch (e) {
       debugPrint('Error placing call: $e');
       messenger.showSnackBar(
-        const SnackBar(content: Text('Error placing call.')),
+        SnackBar(content: Text(l10n.helpErrorPlacingCall)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('مركز مساعدة'),
+        title: Text(l10n.helpCenter),
         backgroundColor: Colors.black,
         foregroundColor: accent,
       ),
@@ -67,32 +73,27 @@ class HelpCenterScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: ListView(
-                    children: const [
-                      SizedBox(height: 8),
+                    children: [
+                      const SizedBox(height: 8),
                       _FaqTile(
-                        question: 'How do I unlock a scooter?',
-                        answer:
-                            'Open the app, tap a scooter, then scan the QR code or enter the scooter code to unlock.',
+                        question: l10n.helpFaqUnlockQuestion,
+                        answer: l10n.helpFaqUnlockAnswer,
                       ),
                       _FaqTile(
-                        question: 'What if the battery is low?',
-                        answer:
-                            'Scooters show battery percentage in the details. Only select scooters with sufficient charge for your trip.',
+                        question: l10n.helpFaqBatteryQuestion,
+                        answer: l10n.helpFaqBatteryAnswer,
                       ),
                       _FaqTile(
-                        question: 'Can I ride on sidewalks?',
-                        answer:
-                            'Please follow local regulations. Generally, use bike lanes and roads where allowed.',
+                        question: l10n.helpFaqSidewalkQuestion,
+                        answer: l10n.helpFaqSidewalkAnswer,
                       ),
                       _FaqTile(
-                        question: 'How are fees calculated?',
-                        answer:
-                            'Fees are charged per-minute. Unlock fees may apply depending on the scooter model.',
+                        question: l10n.helpFaqFeesQuestion,
+                        answer: l10n.helpFaqFeesAnswer,
                       ),
                       _FaqTile(
-                        question: 'How to report a damaged scooter?',
-                        answer:
-                            'Use the "Report" option in the scooter details or contact support via chat or call below.',
+                        question: l10n.helpFaqReportQuestion,
+                        answer: l10n.helpFaqReportAnswer,
                       ),
                     ],
                   ),
@@ -114,7 +115,7 @@ class HelpCenterScreen extends StatelessWidget {
                             Icon(Icons.support_agent, color: accent),
                             const SizedBox(width: 12),
                             Text(
-                              'Contact Support',
+                              l10n.helpContactSupport,
                               style: TextStyle(
                                 color: accent,
                                 fontWeight: FontWeight.bold,
@@ -130,7 +131,7 @@ class HelpCenterScreen extends StatelessWidget {
                               child: ElevatedButton.icon(
                                 onPressed: () => _launchWhatsApp(context),
                                 icon: const Icon(Icons.chat),
-                                label: const Text('Chat on WhatsApp'),
+                                label: Text(l10n.helpChatWhatsApp),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.black,
                                   foregroundColor: accent,
@@ -148,7 +149,7 @@ class HelpCenterScreen extends StatelessWidget {
                               child: ElevatedButton.icon(
                                 onPressed: () => _callSupport(context),
                                 icon: const Icon(Icons.call),
-                                label: const Text('Call Support'),
+                                label: Text(l10n.helpCallSupport),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.black,
                                   foregroundColor: accent,

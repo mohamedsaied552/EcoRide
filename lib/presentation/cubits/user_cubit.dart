@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
 import 'package:glider/core/notifications/notification_manager.dart';
+import 'package:glider/data/datasources/firebase_auth_service.dart';
 import 'package:glider/domain/entities/user.dart';
 import '../../data/repositories/backend_service.dart';
 
@@ -41,38 +42,15 @@ class UserState {
 }
 
 class UserCubit extends Cubit<UserState> {
-  UserCubit({BackendService? backendService})
-    : _backendService = backendService ?? BackendService(),
-      super(const UserState(status: UserStatus.unauthenticated));
+  UserCubit({
+    BackendService? backendService,
+    FirebaseAuthService? firebaseAuthService,
+  }) : _backendService = backendService ?? BackendService(),
+       _firebaseAuthService = firebaseAuthService ?? FirebaseAuthService(),
+       super(const UserState(status: UserStatus.unauthenticated));
 
   final BackendService _backendService;
-
-  Future<AppUser?> login(String email, String password) async {
-    emit(state.copyWith(status: UserStatus.loading, clearError: true));
-    try {
-      final user = await _backendService.login(email, password);
-      emit(
-        state.copyWith(
-          status: UserStatus.authenticated,
-          user: user,
-          clearError: true,
-        ),
-      );
-      // Fire-and-forget: FCM token sync must never block the login flow
-      // (Firebase token retrieval can hang on cold start or denied perms).
-      unawaited(_syncFcmTokenIfNeeded());
-      return user;
-    } catch (error) {
-      emit(
-        state.copyWith(
-          status: UserStatus.failure,
-          errorMessage: error.toString(),
-          clearUser: true,
-        ),
-      );
-      return null;
-    }
-  }
+  final FirebaseAuthService _firebaseAuthService;
 
   Future<void> loadCurrentUser() async {
     emit(state.copyWith(status: UserStatus.loading, clearError: true));
@@ -100,39 +78,31 @@ class UserCubit extends Cubit<UserState> {
   Future<bool> restoreSession() async {
     emit(state.copyWith(status: UserStatus.loading, clearError: true));
 
-    if (!await _backendService.hasSavedSession()) {
-      emit(
-        state.copyWith(
-          status: UserStatus.unauthenticated,
-          clearUser: true,
-          clearError: true,
-        ),
-      );
-      return false;
+    if (await _backendService.hasSavedSession()) {
+      try {
+        final user = await _backendService.fetchCurrentUser();
+        emit(
+          state.copyWith(
+            status: UserStatus.authenticated,
+            user: user,
+            clearError: true,
+          ),
+        );
+        unawaited(_syncFcmTokenIfNeeded());
+        return true;
+      } catch (_) {
+        await _backendService.logout();
+      }
     }
 
-    try {
-      final user = await _backendService.fetchCurrentUser();
-      emit(
-        state.copyWith(
-          status: UserStatus.authenticated,
-          user: user,
-          clearError: true,
-        ),
-      );
-      unawaited(_syncFcmTokenIfNeeded());
-      return true;
-    } catch (error) {
-      await _backendService.logout();
-      emit(
-        state.copyWith(
-          status: UserStatus.unauthenticated,
-          clearUser: true,
-          clearError: true,
-        ),
-      );
-      return false;
-    }
+    emit(
+      state.copyWith(
+        status: UserStatus.unauthenticated,
+        clearUser: true,
+        clearError: true,
+      ),
+    );
+    return false;
   }
 
   void applyAuthenticatedUser(AppUser user) {
@@ -143,6 +113,7 @@ class UserCubit extends Cubit<UserState> {
         clearError: true,
       ),
     );
+    unawaited(_syncFcmTokenIfNeeded());
   }
 
   Future<void> topUp(double amount) async {
@@ -175,6 +146,7 @@ class UserCubit extends Cubit<UserState> {
   }
 
   Future<void> logout() async {
+    await _firebaseAuthService.signOut();
     await _backendService.logout();
     await GetIt.I<NotificationManager>().logoutCleanup();
     emit(

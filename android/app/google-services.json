@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "66760687862-2ef1ncupbt5egmjj2248ku8u15fgqs1e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.glider.scooter",
+            "certificate_hash": "ded05cf76d9530e764e34c7c074559ac606b9696"
+          }
+        },
+        {
           "client_id": "66760687862-hamk9flrs6dkvhugf34jf9t4e7ffr71n.apps.googleusercontent.com",
           "client_type": 3
         }
