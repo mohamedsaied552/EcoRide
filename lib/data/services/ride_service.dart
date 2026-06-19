@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:glider/domain/entities/live_ride_update.dart';
@@ -82,6 +82,9 @@ class RideService {
   static const double pricePerMinute = 1.0; // EGP per minute
   static const double minimumWalletToStart = 10.0; // EGP
 
+  /// Temporarily disabled for indoor/dev testing.
+  static const bool bypassGeofenceChecks = true;
+
   Ride? _currentRide;
   AppUser? _userSnapshot;
   Scooter? _activeScooter;
@@ -96,6 +99,7 @@ class RideService {
   final List<LatLng> _route = <LatLng>[];
   bool _lowBalance = false;
   bool _outsideGeofence = false;
+  LatLng? _realUserPosition;
   int _secondsOutsideGeofence = 0;
 
   final StreamController<RideSessionState> _stateController =
@@ -108,6 +112,10 @@ class RideService {
   RideSessionState? get latestState => _latestState;
 
   bool get hasActiveRide => _currentRide != null;
+
+  void updateUserPosition(double lat, double lng) {
+    _realUserPosition = LatLng(lat, lng);
+  }
 
   Ride? get currentRide => _currentRide;
 
@@ -264,9 +272,7 @@ class RideService {
 
     final durationMinutes = update.currentDurationMinutes;
     if (durationMinutes != null) {
-      _duration = Duration(
-        milliseconds: (durationMinutes * 60 * 1000).round(),
-      );
+      _duration = Duration(milliseconds: (durationMinutes * 60 * 1000).round());
     }
 
     if (update.currentCost != null) {
@@ -320,18 +326,23 @@ class RideService {
     final remaining = startingBalance - cost;
     _lowBalance = remaining <= 0;
 
-    final inside = _geofence.isInside(_scooterPosition);
-    if (!inside) {
-      _secondsOutsideGeofence += 1;
-      _outsideGeofence = true;
-    } else {
+    if (bypassGeofenceChecks) {
       _secondsOutsideGeofence = 0;
       _outsideGeofence = false;
-    }
+    } else {
+      final inside = _geofence.isInside(_scooterPosition);
+      if (!inside) {
+        _secondsOutsideGeofence += 1;
+        _outsideGeofence = true;
+      } else {
+        _secondsOutsideGeofence = 0;
+        _outsideGeofence = false;
+      }
 
-    if (_secondsOutsideGeofence >= 20 || _lowBalance) {
-      unawaited(endRide());
-      return;
+      if (_secondsOutsideGeofence >= 20 || _lowBalance) {
+        unawaited(endRide());
+        return;
+      }
     }
 
     _emitState(isActive: true);
@@ -383,7 +394,7 @@ class RideService {
     double? userLatitude,
     double? userLongitude,
     Uint8List? endPhotoBytes,
-    String endPhotoUrl = '',
+    String? endPhotoPath,
   }) async {
     final ride = _currentRide;
     if (ride == null) {
@@ -396,22 +407,37 @@ class RideService {
     _webSocketSubscription = null;
     await _webSocket.disconnect();
 
-    final completedRide = await _backend.endActiveRide(
-      userLatitude: userLatitude ?? _userPosition.latitude,
-      userLongitude: userLongitude ?? _userPosition.longitude,
-      endPhotoBytes: endPhotoBytes,
-      endPhotoUrl: endPhotoUrl,
-    );
-    _userSnapshot = await _backend.fetchCurrentUser();
+    final finalLat =
+        userLatitude ??
+        _realUserPosition?.latitude ??
+        _scooterPosition.latitude;
+    final finalLng =
+        userLongitude ??
+        _realUserPosition?.longitude ??
+        _scooterPosition.longitude;
 
-    final scooters = await _backend.fetchNearbyScooters();
-    final scooter = scooters
-        .where((item) => item.code == ride.scooterCode)
-        .firstOrNull;
-    await _scooterService.lockScooter(scooter?.id ?? ride.scooterCode);
+    final completedRide = await _backend.endActiveRide(
+      userLatitude: finalLat,
+      userLongitude: finalLng,
+    );
+
+    try {
+      _userSnapshot = await _backend.fetchCurrentUser();
+
+      final scooters = await _backend.fetchNearbyScooters();
+      final scooter = scooters
+          .where((item) => item.code == ride.scooterCode)
+          .firstOrNull;
+      await _scooterService.lockScooter(scooter?.id ?? ride.scooterCode);
+    } catch (error) {
+      debugPrint(
+        'RIDE: post end-ride cleanup failed (ride already ended): $error',
+      );
+    }
 
     _currentRide = null;
     _activeScooter = null;
+    _realUserPosition = null;
     _liveCost = 0;
     _emitState(isActive: false);
 

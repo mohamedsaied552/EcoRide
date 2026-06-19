@@ -1,3 +1,4 @@
+//api_service.dart 
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -45,19 +46,6 @@ class ApiService {
     return _asJsonObject(response, path);
   }
 
-  Future<Map<String, dynamic>> multipartPost(
-    String path, {
-    required FormData data,
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    final response = await _dioClient.post(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-    );
-    return _asJsonObject(response, path);
-  }
-
   Future<Map<String, dynamic>> put(
     String path, {
     Map<String, dynamic>? data,
@@ -71,6 +59,20 @@ class ApiService {
     return _asJsonObject(response, path);
   }
 
+  Future<Map<String, dynamic>> multipartPost(
+    String path, {
+    required FormData data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final response = await _dioClient.post(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+    return _asJsonObject(response, path);
+  }
+
   Future<Map<String, dynamic>> multipartPut(
     String path, {
     required FormData data,
@@ -80,6 +82,7 @@ class ApiService {
       path,
       data: data,
       queryParameters: queryParameters,
+      options: Options(contentType: 'multipart/form-data'),
     );
     return _asJsonObject(response, path);
   }

@@ -295,33 +295,33 @@ class BackendService {
     required double userLatitude,
     required double userLongitude,
     Uint8List? endPhotoBytes,
-    String endPhotoUrl = '',
+    String? endPhotoPath,
   }) async {
-    final Map<String, dynamic> data;
-    if (endPhotoBytes != null && endPhotoBytes.isNotEmpty) {
-      final formData = FormData.fromMap(<String, dynamic>{
-        'userLatitude': userLatitude,
-        'userLongitude': userLongitude,
-        'EndPhoto': MultipartFile.fromBytes(
-          endPhotoBytes,
-          filename: 'end_ride.jpg',
-          contentType: DioMediaType.parse('image/jpeg'),
-        ),
-      });
-      data = await _apiService.multipartPost(
-        '/Ride/active/end',
-        data: formData,
+    MultipartFile? endPhoto;
+    if (endPhotoPath != null && endPhotoPath.isNotEmpty) {
+      endPhoto = await MultipartFile.fromFile(
+        endPhotoPath,
+        filename: 'end_ride.jpg',
+        contentType: DioMediaType.parse('image/jpeg'),
       );
-    } else {
-      data = await _apiService.post(
-        '/Ride/active/end',
-        data: <String, dynamic>{
-          'userLatitude': userLatitude,
-          'userLongitude': userLongitude,
-          'endPhotoUrl': endPhotoUrl,
-        },
+    } else if (endPhotoBytes != null && endPhotoBytes.isNotEmpty) {
+      endPhoto = MultipartFile.fromBytes(
+        endPhotoBytes,
+        filename: 'end_ride.jpg',
+        contentType: DioMediaType.parse('image/jpeg'),
       );
     }
+
+    final formData = FormData.fromMap(<String, dynamic>{
+      'userLatitude': userLatitude,
+      'userLongitude': userLongitude,
+      'endPhoto': ?endPhoto,
+    });
+
+    final data = await _apiService.multipartPost(
+      '/Ride/active/end',
+      data: formData,
+    );
 
     final ride = Ride.fromJson(data);
     _upsertRide(ride);

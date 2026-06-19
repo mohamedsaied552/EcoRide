@@ -138,9 +138,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.locationDisabled)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.locationDisabled)));
       }
       return;
     }
@@ -148,9 +148,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
     final permissionGranted = await _ensureLocationPermission();
     if (!permissionGranted) {
       if (_cachedPermission == LocationPermission.deniedForever && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.locationPermanentlyDenied)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.locationPermanentlyDenied)));
       }
       return;
     }
@@ -171,17 +171,18 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
       _applyPosition(currentPosition);
 
       _positionSubscription?.cancel();
-      _positionSubscription = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 1,
-        ),
-      ).listen(
-        _applyPosition,
-        onError: (error) {
-          debugPrint('Active ride location stream failed: $error');
-        },
-      );
+      _positionSubscription =
+          Geolocator.getPositionStream(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.bestForNavigation,
+              distanceFilter: 1,
+            ),
+          ).listen(
+            _applyPosition,
+            onError: (error) {
+              debugPrint('Active ride location stream failed: $error');
+            },
+          );
     } catch (error) {
       debugPrint('Error starting active ride location tracking: $error');
     }
@@ -277,15 +278,16 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
   }
 
   void _showRideAlerts(RideSessionState state) {
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context);
     if (state.lowBalance) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.walletBalanceLow)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.walletBalanceLow)));
     } else if (state.outsideGeofence) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.outsideOperatingZone)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.outsideOperatingZone)));
     }
   }
 
@@ -388,9 +390,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
         .where((zone) => zone.boundary.length >= 3)
         .map(
           (zone) => Polygon(
-            points: zone.boundary.map(_zonePointToLatLng).toList(
-              growable: false,
-            ),
+            points: zone.boundary
+                .map(_zonePointToLatLng)
+                .toList(growable: false),
             color: _zoneFillColor(zone.type),
             borderColor: _zoneBorderColor(zone.type),
             borderStrokeWidth: 2,
@@ -427,11 +429,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                 color: Colors.blue.withValues(alpha: 0.16),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.navigation,
-                color: Colors.blue,
-                size: 24,
-              ),
+              child: const Icon(Icons.navigation, color: Colors.blue, size: 24),
             ),
           ),
         ),

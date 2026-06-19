@@ -432,6 +432,7 @@ class RideCubit extends Cubit<RideState> {
     if (current is ProximityChecking) return current.preview;
     if (current is ProximityFailure) return current.preview;
     if (current is RideStarting) return current.preview;
+    if (current is RideEnding) return current.preview;
     if (current is RideInProgress) return current.preview;
     if (current is RideFailure) return current.preview;
     return null;
@@ -494,6 +495,30 @@ class RideCubit extends Cubit<RideState> {
     return position;
   }
 
+  /// Temporarily bypass proximity/accuracy guards during end-ride for indoor testing.
+  static const bool bypassEndRideGuards = true;
+
+  Future<Position> _resolveCurrentPositionForEndRide() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Location services are disabled. Please enable GPS.');
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      throw Exception('Location permission is required to end a ride.');
+    }
+
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
+  }
+
   Future<Ride> endActiveRide({Uint8List? endPhotoBytes}) async {
     final preview = _previewFromState();
     if (preview == null) {
@@ -507,7 +532,10 @@ class RideCubit extends Cubit<RideState> {
     emit(RideEnding(preview: preview));
 
     try {
-      final position = await _resolveCurrentPosition();
+      final position = bypassEndRideGuards
+          ? await _resolveCurrentPositionForEndRide()
+          : await _resolveCurrentPosition();
+_rideService.updateUserPosition(position.latitude, position.longitude);
       final ride = await _rideService.endRide(
         userLatitude: position.latitude,
         userLongitude: position.longitude,
