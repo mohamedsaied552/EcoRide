@@ -1,4 +1,3 @@
-//location_accuracy_validator.dart
 import 'package:geolocator/geolocator.dart';
 
 class LocationAccuracyValidator {
