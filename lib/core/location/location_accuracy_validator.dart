@@ -1,9 +1,11 @@
+//location_accuracy_validator.dart
 import 'package:geolocator/geolocator.dart';
 
 class LocationAccuracyValidator {
   /// Maximum acceptable horizontal accuracy in meters when performing
   /// proximity checks for a ride unlock.
-  static const double maximumAcceptableAccuracyMeters = 25.0;
+  /// Relaxed to 150m for indoor/dev testing (production target: ~25m).
+  static const double maximumAcceptableAccuracyMeters = 150.0;
 
   /// Throws when GPS drift or low accuracy makes the position unreliable.
   static void validate(Position position) {

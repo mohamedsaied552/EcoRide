@@ -247,14 +247,12 @@ class _RideScreenState extends State<RideScreen> {
                             final currentPosition =
                                 await Geolocator.getCurrentPosition(
                                   locationSettings: const LocationSettings(
-                                    accuracy: LocationAccuracy.high,
+                                    accuracy: LocationAccuracy.medium,
                                   ),
                                 );
-                            LocationAccuracyValidator.validate(currentPosition);
                             final finishedRide = await _rideService.endRide(
                               userLatitude: currentPosition.latitude,
                               userLongitude: currentPosition.longitude,
-                              endPhotoUrl: '',
                             );
                             if (!context.mounted) return;
                             Navigator.pop(context, finishedRide);

@@ -1,3 +1,4 @@
+//dio_client
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
@@ -40,6 +41,9 @@ class DioClient {
               '${options.method} ${options.path}',
             );
           }
+          if (options.data is FormData) {
+            options.headers.remove('Content-Type');
+          }
           _logRequest(options);
           handler.next(options);
         },
@@ -73,12 +77,14 @@ class DioClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    Options? options,
   }) async {
     try {
       return await _dio.post(
         path,
         data: data,
         queryParameters: queryParameters,
+        options: options,
       );
     } on DioException catch (error) {
       throw _toApiException(error);
@@ -89,9 +95,15 @@ class DioClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    Options? options,
   }) async {
     try {
-      return await _dio.put(path, data: data, queryParameters: queryParameters);
+      return await _dio.put(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
     } on DioException catch (error) {
       throw _toApiException(error);
     }
