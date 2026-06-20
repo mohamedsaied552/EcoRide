@@ -45,19 +45,6 @@ class ApiService {
     return _asJsonObject(response, path);
   }
 
-  Future<Map<String, dynamic>> multipartPost(
-    String path, {
-    required FormData data,
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    final response = await _dioClient.post(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-    );
-    return _asJsonObject(response, path);
-  }
-
   Future<Map<String, dynamic>> put(
     String path, {
     Map<String, dynamic>? data,
@@ -71,18 +58,37 @@ class ApiService {
     return _asJsonObject(response, path);
   }
 
+  Future<Map<String, dynamic>> multipartPost(
+    String path, {
+    required FormData data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    // 💡 بنستخدم الـ dio الأصلي مباشرة من الـ client بعد ما فتحنا الـ Getter
+    final response = await _dioClient.dio.post(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      // ⚠️ شيلنا الـ Options تماماً وسيبنا الـ Interceptor والـ FormData يتفاهموا نيتف!
+    );
+    return _asJsonObject(response, path);
+  }
+
   Future<Map<String, dynamic>> multipartPut(
     String path, {
     required FormData data,
     Map<String, dynamic>? queryParameters,
   }) async {
-    final response = await _dioClient.put(
+    final response = await _dioClient.dio.put(
       path,
       data: data,
       queryParameters: queryParameters,
     );
     return _asJsonObject(response, path);
   }
+
+  
+
+
 
   Future<dynamic> delete(
     String path, {

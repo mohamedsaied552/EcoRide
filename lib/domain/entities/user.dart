@@ -70,22 +70,39 @@ class AppUser {
       source = Map<String, dynamic>.from(nested);
     }
 
-    final email = _readString(source, const ['email']);
-    final roleRaw = source['role'];
+    final email = _readString(source, const ['email', 'Email']);
+    final roleRaw = source['role'] ?? source['Role'];
     return AppUser(
-      id: _readString(source, const ['id', 'userId', 'Id']),
-      name: _readString(source, const ['fullName', 'name', 'FullName']),
+      id: _readString(source, const ['id', 'userId', 'Id', 'ID']),
+      name: _readString(source, const ['fullName', 'name', 'FullName', 'Name']),
       email: email,
-      phone: _readString(source, const ['phoneNumber', 'phone', 'PhoneNumber']),
-      walletBalance: _readDouble(source, const ['walletBalance']),
-      ridesCount: _readInt(source, const ['ridesCount']),
-      rating: _readDouble(source, const ['rating']),
-      avatarUrl: _readNullableString(source, const ['avatarUrl']),
-      accountStatus: _readNullableString(source, const ['accountStatus']),
+      phone: _readString(source, const [
+        'phoneNumber',
+        'phone',
+        'PhoneNumber',
+        'Phone',
+      ]),
+      walletBalance: _readDouble(source, const [
+        'walletBalance',
+        'WalletBalance',
+      ]),
+      ridesCount: _readInt(source, const ['ridesCount', 'RidesCount']),
+      rating: _readDouble(source, const ['rating', 'Rating']),
+      avatarUrl: _sanitizeAvatarUrl(
+        _readNullableString(source, const ['avatarUrl', 'AvatarUrl']),
+      ),
+      accountStatus: _readNullableString(source, const [
+        'accountStatus',
+        'AccountStatus',
+      ]),
       idVerificationStatus: _readNullableString(source, const [
         'idVerificationStatus',
+        'IdVerificationStatus',
       ]),
-      phoneVerified: _readBool(source, const ['phoneVerified']),
+      phoneVerified: _readBool(source, const [
+        'phoneVerified',
+        'PhoneVerified',
+      ]),
       role: _roleFromString(
         roleRaw is String ? roleRaw : _inferRoleFromEmail(email),
       ),
@@ -156,6 +173,19 @@ class AppUser {
     return email.toLowerCase().contains('admin') ? 'admin' : 'user';
   }
 
+  static String? _sanitizeAvatarUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+    const ngrokBase = 'https://releasable-unrecessive-adam.ngrok-free.dev';
+    final normalized = url.trim();
+    if (normalized.contains('localhost:5001')) {
+      return normalized.replaceFirst(
+        RegExp(r'https?://localhost:5001'),
+        ngrokBase,
+      );
+    }
+    return normalized;
+  }
+
   static UserRole _roleFromString(String role) {
     switch (role.toLowerCase()) {
       case 'admin':
@@ -183,4 +213,6 @@ class AppUser {
       'role': role.name,
     };
   }
+
+  static empty() {}
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -107,6 +108,12 @@ class RideStarting extends RideState {
   final RidePreview preview;
 }
 
+class RideEnding extends RideState {
+  const RideEnding({required this.preview});
+
+  final RidePreview preview;
+}
+
 class RideInProgress extends RideState {
   const RideInProgress({required this.preview, required this.ride});
 
@@ -155,11 +162,18 @@ class RideCubit extends Cubit<RideState> {
 
     emit(ScooterLoading(serialNumber: serialNumber));
 
+    debugPrint('RIDE: scanScooter started for serial=$serialNumber');
     try {
       final user =
           _backendService.currentUser ??
           await _backendService.fetchCurrentUser();
+      debugPrint(
+        'RIDE: current user loaded, walletBalance=${user.walletBalance}',
+      );
       final bundle = await _backendService.fetchLiveMap();
+      debugPrint(
+        'RIDE: live map loaded, scooter count=${bundle.scooters.length}',
+      );
       final scooter = bundle.scooters.where((item) {
         final candidate = item.code.trim().toLowerCase();
         return candidate == serialNumber.toLowerCase();
@@ -210,6 +224,8 @@ class RideCubit extends Cubit<RideState> {
 
       await validateProximity(preview: preview);
     } catch (error) {
+      debugPrint('RIDE ERROR: scanScooter failed for serial=$serialNumber');
+      debugPrint('Error: $error');
       emit(RideFailure(message: error.toString(), serialNumber: serialNumber));
     }
   }
@@ -221,8 +237,12 @@ class RideCubit extends Cubit<RideState> {
       return;
     }
 
+    debugPrint('RIDE: refreshRidePreview for serial=${preview.serialNumber}');
     try {
       final refreshedUser = await _backendService.fetchCurrentUser();
+      debugPrint(
+        'RIDE: refreshed current user, walletBalance=${refreshedUser.walletBalance}',
+      );
       final refreshedPreview = preview.copyWith(user: refreshedUser);
       if (!refreshedPreview.hasSufficientBalance) {
         emit(InsufficientFunds(preview: refreshedPreview));
@@ -231,6 +251,8 @@ class RideCubit extends Cubit<RideState> {
 
       await validateProximity(preview: refreshedPreview);
     } catch (error) {
+      debugPrint('RIDE ERROR: refreshRidePreview failed');
+      debugPrint('Error: $error');
       emit(
         RideFailure(
           message: error.toString(),
@@ -252,12 +274,16 @@ class RideCubit extends Cubit<RideState> {
 
     try {
       final position = await _resolveCurrentPosition();
+      debugPrint(
+        'RIDE: current position resolved lat=${position.latitude} lng=${position.longitude}',
+      );
       final distance = calculateDistanceMeters(
         userLatitude: position.latitude,
         userLongitude: position.longitude,
         scooterLatitude: activePreview.scooter.lat,
         scooterLongitude: activePreview.scooter.lng,
       );
+      debugPrint('RIDE: distance calculated=${distance.toStringAsFixed(2)}m');
 
       final updatedPreview = activePreview.copyWith(
         distanceToScooterMeters: distance,
@@ -270,6 +296,10 @@ class RideCubit extends Cubit<RideState> {
 
       emit(ScooterLoaded(preview: updatedPreview));
     } catch (error) {
+      debugPrint(
+        'RIDE ERROR: validateProximity failed for serial=${activePreview.serialNumber}',
+      );
+      debugPrint('Error: $error');
       emit(
         RideFailure(
           message: error.toString(),
@@ -336,29 +366,33 @@ class RideCubit extends Cubit<RideState> {
     emit(const RideInitial());
   }
 
-  Future<void> appStartedCheck() async {
+  Future<void> appStartedCheck({AppUser? currentUser}) async {
     if (state is! RideInitial) return;
 
     emit(const CheckingActiveRide());
 
+    final user =
+        currentUser ??
+        _backendService.currentUser ??
+        await _backendService.fetchCurrentUser();
+
     try {
-      final user =
-          _backendService.currentUser ??
-          await _backendService.fetchCurrentUser();
       final activeRide = await _checkActiveRideUseCase.call(user.id);
       if (activeRide == null) {
         emit(const RideInitial());
         return;
       }
 
+      await _rideService.restoreActiveRide(activeRide, user);
+
       final recoveredPreview = RidePreview(
         serialNumber: activeRide.scooterCode,
         scooter: Scooter(
           id: activeRide.scooterCode,
           code: activeRide.scooterCode,
-          lat: 0,
-          lng: 0,
-          batteryPercent: 0,
+          lat: _rideService.latestState?.scooterPosition.latitude ?? 0,
+          lng: _rideService.latestState?.scooterPosition.longitude ?? 0,
+          batteryPercent: _rideService.latestState?.batteryPercent ?? 0,
           isAvailable: false,
           locationName: activeRide.fromName,
           modelName: null,
@@ -372,11 +406,8 @@ class RideCubit extends Cubit<RideState> {
 
       emit(RideInProgress(preview: recoveredPreview, ride: activeRide));
     } catch (error) {
-      emit(
-        RideFailure(
-          message: 'Unable to recover active ride: ${error.toString()}',
-        ),
-      );
+      debugPrint('RIDE ERROR: active ride restoration failed: $error');
+      emit(const RideInitial());
     }
   }
 
@@ -401,6 +432,7 @@ class RideCubit extends Cubit<RideState> {
     if (current is ProximityChecking) return current.preview;
     if (current is ProximityFailure) return current.preview;
     if (current is RideStarting) return current.preview;
+    if (current is RideEnding) return current.preview;
     if (current is RideInProgress) return current.preview;
     if (current is RideFailure) return current.preview;
     return null;
@@ -463,5 +495,98 @@ class RideCubit extends Cubit<RideState> {
     return position;
   }
 
-  Future<void> endActiveRide() async {}
+  /// Temporarily bypass proximity/accuracy guards during end-ride for indoor testing.
+  static const bool bypassEndRideGuards = true;
+  
+  get endPhotoPath => null;
+
+  Future<Position> _resolveCurrentPositionForEndRide() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Location services are disabled. Please enable GPS.');
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      throw Exception('Location permission is required to end a ride.');
+    }
+
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
+  }
+
+ // ✅ حط مكانه
+  Future<Ride> endActiveRide({Uint8List? endPhotoBytes}) async {
+    var preview = _previewFromState();
+
+    // لو الـ cubit مش عارف الـ preview، جيبه من الـ RideService مباشرة
+    if (preview == null && _rideService.currentRide != null) {
+      final activeRide = _rideService.currentRide!;
+      preview = RidePreview(
+        serialNumber: activeRide.scooterCode,
+        scooter: Scooter(
+          id: activeRide.scooterCode,
+          code: activeRide.scooterCode,
+          lat: _rideService.latestState?.scooterPosition.latitude ?? 0,
+          lng: _rideService.latestState?.scooterPosition.longitude ?? 0,
+          batteryPercent: _rideService.latestState?.batteryPercent ?? 0,
+          isAvailable: false,
+          locationName: activeRide.fromName,
+          modelName: null,
+          rawStatus: 'Recovered',
+        ),
+        user: _backendService.currentUser ?? AppUser.empty(),
+        minimumRequiredBalance: minimumWalletBalance,
+        allowedUnlockRadiusMeters: unlockRadiusMeters,
+        distanceToScooterMeters: 0,
+      );
+      emit(RideInProgress(preview: preview, ride: activeRide));
+    }
+
+    if (preview == null) {
+      throw StateError('No active ride preview available to end.');
+    }
+
+    // تأكيد إن الـ UI باعت أي داتا للصورة
+    if ((endPhotoBytes == null || endPhotoBytes.isEmpty) &&
+        (endPhotoPath == null || endPhotoPath.isEmpty)) {
+      throw StateError('A parking photo is required to end the ride.');
+    }
+
+    emit(RideEnding(preview: preview));
+
+    try {
+      final position = bypassEndRideGuards
+          ? await _resolveCurrentPositionForEndRide()
+          : await _resolveCurrentPosition();
+
+      _rideService.updateUserPosition(position.latitude, position.longitude);
+
+      // 💡 التعديل هنا: بنمرر الـ Path والـ Bytes للـ RideService
+      final ride = await _rideService.endRide(
+        userLatitude: position.latitude,
+        userLongitude: position.longitude,
+        endPhotoBytes: endPhotoBytes,
+        endPhotoPath: endPhotoPath, // 👈 باصي الـ Path الجديد هنا
+      );
+
+      emit(const RideInitial());
+      return ride;
+    } catch (error) {
+      emit(
+        RideFailure(
+          message: error.toString(),
+          serialNumber: preview.serialNumber,
+          preview: preview,
+        ),
+      );
+      rethrow;
+    }
+  }
 }

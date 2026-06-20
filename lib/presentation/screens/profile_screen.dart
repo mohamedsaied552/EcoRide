@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/profile_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/widgets/loading_spinner.dart';
@@ -39,6 +40,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return BlocProvider(
       create: (_) => ProfileCubit()..load(),
       child: BlocListener<ProfileCubit, ProfileState>(
@@ -72,7 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             return Scaffold(
               appBar: AppBar(
-                title: const Text('Profile'),
+                title: Text(l10n.profile),
                 actions: [
                   TextButton.icon(
                     onPressed: () async {
@@ -86,12 +89,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
                     },
                     icon: const Icon(Icons.logout),
-                    label: const Text('Logout'),
+                    label: Text(l10n.logout),
                   ),
                 ],
               ),
               body: state.status == ProfileStatus.loading
-                  ? const LoadingSpinner(message: 'Loading profile...')
+                  ? LoadingSpinner(message: l10n.loadingProfile)
                   : SingleChildScrollView(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -104,8 +107,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 46,
-                                    backgroundColor: const Color(0xFF1FAE6C)
-                                        .withValues(alpha: 0.18),
+                                    backgroundColor: const Color(
+                                      0xFF1FAE6C,
+                                    ).withValues(alpha: 0.18),
                                     backgroundImage: avatarProvider,
                                     child: avatarProvider == null
                                         ? const Icon(
@@ -118,22 +122,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 12),
                                   Text(
                                     state.user?.name ?? '',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     state.user?.email ?? '',
-                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
                                   ),
                                   const SizedBox(height: 14),
                                   Row(
                                     children: [
                                       Expanded(
                                         child: OutlinedButton.icon(
-                                          onPressed: () =>
-                                              cubit.pickAvatar(ImageSource.camera),
-                                          icon: const Icon(Icons.photo_camera_outlined),
-                                          label: const Text('Camera'),
+                                          onPressed: () => cubit.pickAvatar(
+                                            ImageSource.camera,
+                                          ),
+                                          icon: const Icon(
+                                            Icons.photo_camera_outlined,
+                                          ),
+                                          label: Text(l10n.camera),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -142,8 +153,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           onPressed: () => cubit.pickAvatar(
                                             ImageSource.gallery,
                                           ),
-                                          icon: const Icon(Icons.photo_library_outlined),
-                                          label: const Text('Gallery'),
+                                          icon: const Icon(
+                                            Icons.photo_library_outlined,
+                                          ),
+                                          label: Text(l10n.gallery),
                                         ),
                                       ),
                                     ],
@@ -154,34 +167,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 16),
                           _SectionCard(
-                            title: 'Account Information',
+                            title: l10n.accountInformation,
                             child: Form(
                               key: _profileFormKey,
                               child: Column(
                                 children: [
                                   _ProfileField(
                                     controller: _nameController,
-                                    label: 'Full Name',
+                                    label: l10n.fullName,
                                     icon: Icons.person_outline,
                                     onChanged: cubit.updateFullName,
                                     validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
-                                        return 'Please enter your name.';
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
+                                        return l10n.pleaseEnterName;
                                       }
                                       return null;
                                     },
                                   ),
-                                  
                                   const SizedBox(height: 14),
                                   _ProfileField(
                                     controller: _phoneController,
-                                    label: 'Phone Number',
+                                    label: l10n.phoneNumber,
                                     icon: Icons.phone_outlined,
                                     keyboardType: TextInputType.phone,
                                     onChanged: cubit.updatePhone,
                                     validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
-                                        return 'Please enter your phone number.';
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
+                                        return l10n.pleaseEnterPhone;
                                       }
                                       return null;
                                     },
@@ -190,7 +204,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   SizedBox(
                                     width: double.infinity,
                                     child: ElevatedButton(
-                                      onPressed: state.status == ProfileStatus.saving
+                                      onPressed:
+                                          state.status == ProfileStatus.saving
                                           ? null
                                           : () async {
                                               if (_profileFormKey.currentState
@@ -199,7 +214,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 await cubit.saveProfile();
                                               }
                                             },
-                                      child: state.status == ProfileStatus.saving
+                                      child:
+                                          state.status == ProfileStatus.saving
                                           ? const SizedBox(
                                               height: 20,
                                               width: 20,
@@ -207,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 strokeWidth: 2,
                                               ),
                                             )
-                                          : const Text('Save profile'),
+                                          : Text(l10n.saveProfile),
                                     ),
                                   ),
                                 ],
@@ -216,20 +232,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 16),
                           _SectionCard(
-                            title: 'Security',
+                            title: l10n.security,
                             child: Form(
                               key: _passwordFormKey,
                               child: Column(
                                 children: [
                                   _ProfileField(
                                     controller: _currentPasswordController,
-                                    label: 'Current Password',
+                                    label: l10n.currentPassword,
                                     icon: Icons.lock_outline,
                                     obscureText: true,
                                     onChanged: cubit.updateCurrentPassword,
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
-                                        return 'Enter your current password.';
+                                        return l10n.enterCurrentPassword;
                                       }
                                       return null;
                                     },
@@ -237,13 +253,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 14),
                                   _ProfileField(
                                     controller: _newPasswordController,
-                                    label: 'New Password',
+                                    label: l10n.newPassword,
                                     icon: Icons.lock_reset_outlined,
                                     obscureText: true,
                                     onChanged: cubit.updateNewPassword,
                                     validator: (value) {
                                       if (value == null || value.length < 8) {
-                                        return 'New password must be at least 8 characters.';
+                                        return l10n.newPasswordMin8;
                                       }
                                       return null;
                                     },
@@ -251,13 +267,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 14),
                                   _ProfileField(
                                     controller: _confirmPasswordController,
-                                    label: 'Confirm New Password',
+                                    label: l10n.confirmNewPassword,
                                     icon: Icons.lock_outline,
                                     obscureText: true,
                                     onChanged: cubit.updateConfirmPassword,
                                     validator: (value) {
-                                      if (value != _newPasswordController.text) {
-                                        return 'Passwords do not match.';
+                                      if (value !=
+                                          _newPasswordController.text) {
+                                        return l10n.passwordsDoNotMatch;
                                       }
                                       return null;
                                     },
@@ -266,7 +283,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   SizedBox(
                                     width: double.infinity,
                                     child: OutlinedButton(
-                                      onPressed: state.status ==
+                                      onPressed:
+                                          state.status ==
                                               ProfileStatus.changingPassword
                                           ? null
                                           : () async {
@@ -276,7 +294,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 await cubit.changePassword();
                                               }
                                             },
-                                      child: state.status ==
+                                      child:
+                                          state.status ==
                                               ProfileStatus.changingPassword
                                           ? const SizedBox(
                                               height: 20,
@@ -285,7 +304,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 strokeWidth: 2,
                                               ),
                                             )
-                                          : const Text('Update password'),
+                                          : Text(l10n.updatePassword),
                                     ),
                                   ),
                                 ],
@@ -334,10 +353,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.child,
-  });
+  const _SectionCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -385,10 +401,7 @@ class _ProfileField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-      ),
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
       onChanged: onChanged,
       validator: validator,
     );

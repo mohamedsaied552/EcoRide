@@ -30,11 +30,18 @@ class DioClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await _tokenStorage.getAccessToken();
-          if (!_isPublicEndpoint(options.path) &&
-              token != null &&
-              token.trim().isNotEmpty) {
+          final isPublic = _isPublicEndpoint(options.path);
+          if (!isPublic && token != null && token.trim().isNotEmpty) {
             options.headers['Authorization'] =
-                '${AppConstants.bearerPrefix} $token';
+                '${AppConstants.bearerPrefix} ${token.trim()}';
+          } else if (!isPublic && kDebugMode) {
+            debugPrint(
+              'API WARNING: Missing auth token for protected request '
+              '${options.method} ${options.path}',
+            );
+          }
+          if (options.data is FormData) {
+            options.headers.remove('Content-Type');
           }
           _logRequest(options);
           handler.next(options);
@@ -53,6 +60,7 @@ class DioClient {
 
   final Dio _dio;
   final TokenStorage _tokenStorage;
+  Dio get dio => _dio;
 
   Future<Response<dynamic>> get(
     String path, {
@@ -69,12 +77,14 @@ class DioClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    Options? options,
   }) async {
     try {
       return await _dio.post(
         path,
         data: data,
         queryParameters: queryParameters,
+        options: options,
       );
     } on DioException catch (error) {
       throw _toApiException(error);
@@ -85,9 +95,15 @@ class DioClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    Options? options,
   }) async {
     try {
-      return await _dio.put(path, data: data, queryParameters: queryParameters);
+      return await _dio.put(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
     } on DioException catch (error) {
       throw _toApiException(error);
     }
@@ -114,12 +130,10 @@ class DioClient {
   }
 
   bool _isPublicEndpoint(String path) {
-    return path == '/Auth/login' ||
-        path == '/Auth/register' ||
-        path == '/Auth/forgot-password' ||
-        path == '/Auth/reset-password' ||
-        path == '/Auth/verify-email' ||
-        path == '/Auth/resend-otp';
+    final normalized = path.split('?').first;
+    return normalized == '/Auth/login' ||
+        normalized == '/Auth/register' ||
+        normalized == '/Auth/reset-password';
   }
 
   void _logRequest(RequestOptions options) {
@@ -131,7 +145,21 @@ class DioClient {
       debugPrint('API QUERY: ${options.queryParameters}');
     }
     if (options.data != null) {
-      debugPrint('API BODY: ${_sanitizeBody(options.data)}');
+      final data = options.data;
+      // 💡 إذا كان الطلب FormData، هنفصص الـ Fields والـ Files ونطبع أساميها (الـ Keys)
+      if (data is FormData) {
+        final fields = data.fields
+            .map((e) => '${e.key}: ${e.value}')
+            .join(', ');
+        final files = data.files
+            .map((e) => '${e.key}: <File: ${e.value.filename}>')
+            .join(', ');
+        debugPrint(
+          'API BODY (FormData) 👈 FIELDS: [$fields] | FILES: [$files]',
+        );
+      } else {
+        debugPrint('API BODY: ${_sanitizeBody(data)}');
+      }
     }
   }
 

@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
+
 class IdUploadCard extends StatelessWidget {
   const IdUploadCard({
     required this.imageBytes,
@@ -22,6 +24,7 @@ class IdUploadCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final hasImage = imageBytes != null && imageBytes!.isNotEmpty;
 
     return Column(
@@ -57,18 +60,17 @@ class IdUploadCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         filterQuality: FilterQuality.high,
                         errorBuilder: (context, error, stackTrace) {
-                          return const _UploadPlaceholder(
+                          return _UploadPlaceholder(
                             icon: Icons.broken_image_outlined,
-                            title: 'Unable to preview image',
-                            subtitle: 'Try selecting a different photo.',
+                            title: l10n.unablePreviewImage,
+                            subtitle: l10n.tryDifferentPhoto,
                           );
                         },
                       )
-                    : const _UploadPlaceholder(
+                    : _UploadPlaceholder(
                         icon: Icons.badge_outlined,
-                        title: 'Upload your national ID',
-                        subtitle:
-                            'Use a sharp, well-lit image and keep the full ID visible.',
+                        title: l10n.uploadNationalId,
+                        subtitle: l10n.uploadIdHint,
                       ),
               ),
               const SizedBox(height: 16),
@@ -89,7 +91,7 @@ class IdUploadCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: onCameraTap,
                       icon: const Icon(Icons.photo_camera_outlined),
-                      label: const Text('Camera'),
+                      label: Text(l10n.camera),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -97,7 +99,7 @@ class IdUploadCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: onGalleryTap,
                       icon: const Icon(Icons.photo_library_outlined),
-                      label: const Text('Gallery'),
+                      label: Text(l10n.gallery),
                     ),
                   ),
                 ],
@@ -109,7 +111,7 @@ class IdUploadCard extends StatelessWidget {
                   child: TextButton.icon(
                     onPressed: onClear,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Remove and re-upload'),
+                    label: Text(l10n.removeAndReupload),
                   ),
                 ),
               ],

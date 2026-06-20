@@ -10,4 +10,5 @@ class AppConstants {
   static const String bearerPrefix = 'Bearer';
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';
+  static const String lastSyncedFcmTokenKey = 'last_synced_fcm_token';
 }

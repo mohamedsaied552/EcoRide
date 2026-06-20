@@ -9,20 +9,35 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.8
   dio: ^5.9.0
   http: ^1.5.0
   image_picker: ^1.1.2
   google_maps_flutter: ^2.5.0
-  mobile_scanner: ^3.5.6
+  mobile_scanner: ^7.2.0
   geolocator: ^14.0.2
-  flutter_bloc: ^8.1.5
+  flutter_bloc: ^9.1.1
   shared_preferences: ^2.5.3
-  firebase_core: ^3.0.0
-  firebase_messaging: ^15.2.10
-  get_it: ^7.6.0
+  firebase_core: ^4.10.0
+  firebase_messaging: ^16.3.0
+  flutter_local_notifications: ^19.2.1
+  get_it: ^9.2.1
   flutter_map: ^8.3.0
   latlong2: ^0.9.1
+  url_launcher: ^6.3.2
+  webview_flutter: ^4.0.8
+  firebase_auth: ^6.5.2
+  web_socket_channel: ^3.0.3
+  flutter_launcher_icons: ^0.13.1
+
+# إعدادات الأيقونة
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21 
 
 dev_dependencies:
   flutter_test:
@@ -30,6 +45,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+  generate: true
   uses-material-design: true
   assets:
     - assets/scooter.png

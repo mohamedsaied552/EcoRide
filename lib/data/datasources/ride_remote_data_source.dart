@@ -27,8 +27,9 @@ class RideRemoteDataSourceImpl implements RideRemoteDataSource {
 
       // If adapter returned a Ride serialized map, try to convert.
       if (raw is Ride) return raw;
-      if (raw is Map)
+      if (raw is Map) {
         return mapActiveRideDtoToRide(Map<String, dynamic>.from(raw));
+      }
 
       return null;
     } catch (e) {

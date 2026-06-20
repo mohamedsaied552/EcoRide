@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
+import 'package:glider/presentation/cubits/topup_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/widgets/loading_spinner.dart';
 import 'topup_screen.dart';
@@ -10,22 +12,24 @@ class WalletScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return BlocBuilder<UserCubit, UserState>(
       builder: (context, state) {
         if (state.status == UserStatus.loading) {
-          return const Scaffold(
-            body: LoadingSpinner(message: 'Loading balance...'),
+          return Scaffold(
+            body: LoadingSpinner(message: l10n.loadingBalance),
           );
         }
 
         final user = state.user;
         return Scaffold(
-          appBar: AppBar(title: const Text('Wallet')),
+          appBar: AppBar(title: Text(l10n.wallet)),
           body: Padding(
             padding: const EdgeInsets.all(20),
             child: user == null
                 ? Center(
-                    child: Text(state.errorMessage ?? 'Please log in first.'),
+                    child: Text(state.errorMessage ?? l10n.pleaseLoginFirst),
                   )
                 : Column(
                     children: [
@@ -36,12 +40,14 @@ class WalletScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Current balance',
+                                l10n.currentBalance,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                '${user.walletBalance.toStringAsFixed(0)} EGP',
+                                l10n.costEgp(
+                                  user.walletBalance.toStringAsFixed(0),
+                                ),
                                 style: const TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.w700,
@@ -49,7 +55,7 @@ class WalletScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Linked account: ${user.email}',
+                                l10n.linkedAccount(user.email),
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ],
@@ -64,10 +70,15 @@ class WalletScreen extends StatelessWidget {
                           onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const TopUpScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => BlocProvider(
+                                  create: (_) => TopUpCubit(),
+                                  child: const TopUpScreen(),
+                                ),
+                              ),
                             );
                           },
-                          child: const Text('Add balance'),
+                          child: Text(l10n.addBalanceButton),
                         ),
                       ),
                     ],

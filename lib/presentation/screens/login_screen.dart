@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/login_cubit.dart';
-import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/core/notifications/notification_manager.dart';
-import '../../data/repositories/backend_service.dart';
+import 'package:glider/presentation/cubits/verify_otp_cubit.dart';
+import 'package:glider/presentation/utils/firebase_auth_error_utils.dart';
+import 'package:glider/presentation/utils/phone_utils.dart';
+import 'package:glider/presentation/utils/register_flow_utils.dart';
+import 'package:glider/data/datasources/firebase_auth_service.dart';
+import 'package:glider/presentation/screens/forgot_password_screen.dart';
+import 'package:glider/presentation/screens/verify_otp_screen.dart';
+import 'package:glider/presentation/widgets/country_code_picker.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,15 +22,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _forgotPasswordController = TextEditingController();
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
-    _forgotPasswordController.dispose();
     super.dispose();
   }
 
@@ -34,371 +37,277 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
     final loginCubit = context.read<LoginCubit>();
-    final userCubit = context.read<UserCubit>();
-    loginCubit.setLoading();
+    final sent = await loginCubit.sendOtp();
 
-    final user = await userCubit.login(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
+    if (!mounted || !sent) return;
 
-    if (!mounted) {
-      return;
-    }
+    final session = loginCubit.state.verificationSession;
+    if (session == null) return;
 
-    if (user == null) {
-      loginCubit.setFailure(userCubit.state.errorMessage ?? 'Login failed.');
-      return;
-    }
-
-    loginCubit.setIdle();
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Login successful'),
-        backgroundColor: Color(0xFF1FAE6C),
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VerifyOtpScreen(
+          phoneNumber: loginCubit.state.internationalPhoneNumber,
+          flow: VerifyOtpFlow.login,
+          password: loginCubit.state.password,
+          verificationId: session.verificationId,
+          forceResendingToken: session.forceResendingToken,
+        ),
       ),
     );
 
-    if (!mounted) {
-      return;
+    if (mounted) {
+      loginCubit.setIdle();
     }
-
-    navigator.pushNamedAndRemoveUntil('/map', (route) => false);
-
-    // Initialize notifications in the background after navigation so the UI
-    // can move to the home page immediately.
-    _initializeNotifications();
-  }
-
-  /// Initialize NotificationManager after successful login
-  /// This ensures the user has a valid JWT token before requesting notification permissions
-  Future<void> _initializeNotifications() async {
-    try {
-      final notificationManager = GetIt.I<NotificationManager>();
-      await notificationManager.initialize();
-      debugPrint('Notifications initialized successfully after login.');
-    } catch (e) {
-      debugPrint('Error initializing notifications: $e');
-      // Non-blocking error - notifications failure shouldn't prevent app usage
-    }
-  }
-
-  Future<void> _showForgotPasswordDialog(BuildContext context) async {
-    final backendService = BackendService();
-    final messenger = ScaffoldMessenger.of(context);
-    _forgotPasswordController.text = _emailController.text.trim();
-
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Reset password'),
-          content: TextField(
-            controller: _forgotPasswordController,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              hintText: 'Enter your account email',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  await backendService.forgotPassword(
-                    _forgotPasswordController.text.trim(),
-                  );
-                  if (!dialogContext.mounted) {
-                    return;
-                  }
-                  Navigator.of(dialogContext).pop();
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Reset instructions sent successfully.'),
-                      backgroundColor: Color(0xFF1FAE6C),
-                    ),
-                  );
-                } catch (error) {
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text('$error'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              child: const Text('Send'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return BlocProvider(
       create: (_) => LoginCubit(),
-      child: BlocListener<UserCubit, UserState>(
+      child: BlocConsumer<LoginCubit, LoginState>(
         listenWhen: (previous, current) =>
             previous.errorMessage != current.errorMessage &&
             current.errorMessage != null,
         listener: (context, state) {
-          if (state.errorMessage != null &&
-              state.status == UserStatus.failure) {
+          if (state.status == LoginStatus.failure &&
+              state.errorMessage != null) {
+            final phoneError = localizePhoneValidationError(
+              l10n,
+              state.errorMessage,
+            );
+            final errorCode = FirebaseAuthErrorCode.values.asNameMap()[
+              state.errorMessage!];
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage!),
+                content: Text(
+                  errorCode != null
+                      ? localizeFirebaseAuthError(l10n, errorCode)
+                      : phoneError,
+                ),
                 backgroundColor: Colors.red,
               ),
             );
           }
         },
-        child: BlocBuilder<LoginCubit, LoginState>(
-          builder: (context, loginState) {
-            return Scaffold(
-              body: SafeArea(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 40),
-                        Center(
-                          child: Container(
-                            height: 84,
-                            width: 84,
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF1FAE6C,
-                              ).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(26),
-                            ),
-                            child: const Icon(
-                              Icons.electric_scooter,
-                              size: 48,
-                              color: Color(0xFF1FAE6C),
-                            ),
+        builder: (context, loginState) {
+          final loginCubit = context.read<LoginCubit>();
+
+          return Scaffold(
+            body: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 40),
+                      Center(
+                        child: Container(
+                          height: 84,
+                          width: 84,
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF1FAE6C,
+                            ).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(26),
+                          ),
+                          child: const Icon(
+                            Icons.electric_scooter,
+                            size: 48,
+                            color: Color(0xFF1FAE6C),
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'Welcome Back',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.headlineSmall?.copyWith(fontSize: 28),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Sign in to ride or manage your fleet.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        // Container(
-                        //   padding: const EdgeInsets.all(14),
-                        //   decoration: BoxDecoration(
-                        //     color: const Color(0xFFF8FAFC),
-                        //     borderRadius: BorderRadius.circular(16),
-                        //     border: Border.all(color: const Color(0xFFE2E8F0)),
-                        //   ),
-                        //   child: Text(
-                        //     'API URL: ${BackendService.baseUrl}',
-                        //     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        //           fontSize: 12,
-                        //           color: const Color(0xFF0F7A52),
-                        //         ),
-                        //   ),
-                        // ),
-                        const SizedBox(height: 32),
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          decoration: _inputDecoration(
-                            label: 'Email',
-                            hint: 'Enter your email',
-                            icon: Icons.email_outlined,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        l10n.welcomeBack,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontSize: 28),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.signInWithPhoneSubtitle,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 120,
+                            child: CountryCodePicker(
+                              selected: loginState.country,
+                              onChanged: loginCubit.updateCountry,
+                            ),
                           ),
-                          validator: (value) {
-                            final email = value?.trim() ?? '';
-                            final pattern = RegExp(
-                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              textInputAction: TextInputAction.next,
+                              onChanged: loginCubit.updateLocalPhoneNumber,
+                              decoration: _inputDecoration(
+                                label: l10n.phoneNumber,
+                                hint: l10n.phoneHintLocal,
+                                icon: Icons.phone_outlined,
+                              ),
+                              validator: (value) {
+                                final error =
+                                    loginState.country.dialCode ==
+                                        CountryDialCode.egypt.dialCode
+                                    ? PhoneUtils.validateEgyptLocalNumber(
+                                        value ?? '',
+                                      )
+                                    : (PhoneUtils.digitsOnly(value ?? '')
+                                              .length <
+                                          loginState.country.localDigits
+                                      ? 'invalidLength'
+                                      : null);
+                                if (error != null) {
+                                  return localizePhoneValidationError(
+                                    l10n,
+                                    error,
+                                  );
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: loginState.isPasswordObscured,
+                        textInputAction: TextInputAction.done,
+                        onChanged: loginCubit.updatePassword,
+                        onFieldSubmitted: (_) => _submitLogin(context),
+                        decoration:
+                            _inputDecoration(
+                              label: l10n.password,
+                              hint: l10n.enterPassword,
+                              icon: Icons.lock_outlined,
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  loginState.isPasswordObscured
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                ),
+                                onPressed:
+                                    loginCubit.togglePasswordVisibility,
+                              ),
+                            ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return l10n.pleaseEnterPassword;
+                          }
+                          if (value.length < 6) {
+                            return l10n.passwordMin6;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordScreen(),
+                              ),
                             );
-                            if (email.isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            if (!pattern.hasMatch(email)) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
                           },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: loginState.isPasswordObscured,
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _submitLogin(context),
-                          decoration:
-                              _inputDecoration(
-                                label: 'Password',
-                                hint: 'Enter your password',
-                                icon: Icons.lock_outlined,
-                              ).copyWith(
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    loginState.isPasswordObscured
-                                        ? Icons.visibility_outlined
-                                        : Icons.visibility_off_outlined,
-                                  ),
-                                  onPressed: context
-                                      .read<LoginCubit>()
-                                      .togglePasswordVisibility,
-                                ),
-                              ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your password';
-                            }
-                            if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () => _showForgotPasswordDialog(context),
-                            child: const Text(
-                              'Forgot Password?',
-                              style: TextStyle(color: Color(0xFF1FAE6C)),
-                            ),
+                          child: Text(
+                            l10n.forgotPassword,
+                            style: const TextStyle(color: Color(0xFF1FAE6C)),
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          height: 54,
-                          child: ElevatedButton(
-                            onPressed: loginState.status == LoginStatus.loading
-                                ? null
-                                : () => _submitLogin(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1FAE6C),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 0,
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: loginState.status == LoginStatus.loading
+                              ? null
+                              : () => _submitLogin(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1FAE6C),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            child: loginState.status == LoginStatus.loading
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  )
-                                : const Text(
-                                    'Sign In',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
+                            elevation: 0,
                           ),
-                        ),
-                        const SizedBox(height: 32),
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Divider(color: Color(0xFFE2E8F0)),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: Text(
-                                'OR',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            const Expanded(
-                              child: Divider(color: Color(0xFFE2E8F0)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
-                        SizedBox(
-                          height: 52,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Google sign-in is not available',
+                          child: loginState.status == LoginStatus.loading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(
+                                          Colors.white,
+                                        ),
                                   ),
+                                )
+                              : Text(
+                                  l10n.sendOtp,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            l10n.dontHaveAccount,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SignupScreen(),
                                 ),
                               );
                             },
-
-                            label: const Text('Sign-In with Google'),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Don't have an account? ",
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const SignupScreen(),
-                                  ),
-                                );
-                              },
-                              child: const Text(
-                                'Sign Up',
-                                style: TextStyle(
-                                  color: Color(0xFF1FAE6C),
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                ),
+                            child: Text(
+                              l10n.signUp,
+                              style: const TextStyle(
+                                color: Color(0xFF1FAE6C),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

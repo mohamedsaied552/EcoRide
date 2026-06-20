@@ -1,8 +1,10 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
-import 'package:glider/presentation/screens/ride_screen.dart';
+import 'package:glider/presentation/cubits/user_cubit.dart';
+import 'package:glider/presentation/screens/active_ride_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,40 +15,50 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  late final StreamSubscription<RideState> _rideSubscription;
   @override
   void initState() {
     super.initState();
-    final rideCubit = context.read<RideCubit>();
-    rideCubit.appStartedCheck();
-
-    _rideSubscription = rideCubit.stream.listen((state) {
-      if (!mounted) return;
-      if (state is RideInProgress) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const RideScreen()),
-        );
-      } else if (state is RideInitial || state is RideFailure) {
-        Future.delayed(const Duration(seconds: 2), () {
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-          );
-        });
-      }
-    });
+    _performStartupCheck();
   }
 
-  @override
-  void dispose() {
-    _rideSubscription.cancel();
-    super.dispose();
+  Future<void> _performStartupCheck() async {
+    final userCubit = context.read<UserCubit>();
+    final rideCubit = context.read<RideCubit>();
+
+    final isAuthenticated = await userCubit.restoreSession();
+    if (!mounted) return;
+
+    if (!isAuthenticated) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      );
+      return;
+    }
+
+    await rideCubit.appStartedCheck(currentUser: userCubit.state.user);
+    if (!mounted) return;
+
+    final rideState = rideCubit.state;
+    if (rideState is RideInProgress) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ActiveRideScreen(
+            scooterCode: rideState.preview.serialNumber,
+          ),
+        ),
+      );
+      return;
+    }
+
+    Navigator.pushReplacementNamed(context, '/map');
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -74,18 +86,18 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
-                "Smart Scooter",
-                style: TextStyle(
+              Text(
+                l10n.appTitle,
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                "Move faster, move smarter",
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+              Text(
+                l10n.moveFaster,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ],
           ),
