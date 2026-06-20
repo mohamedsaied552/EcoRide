@@ -63,11 +63,12 @@ class ApiService {
     required FormData data,
     Map<String, dynamic>? queryParameters,
   }) async {
-    final response = await _dioClient.post(
+    // 💡 بنستخدم الـ dio الأصلي مباشرة من الـ client بعد ما فتحنا الـ Getter
+    final response = await _dioClient.dio.post(
       path,
       data: data,
       queryParameters: queryParameters,
-      options: Options(contentType: 'multipart/form-data'),
+      // ⚠️ شيلنا الـ Options تماماً وسيبنا الـ Interceptor والـ FormData يتفاهموا نيتف!
     );
     return _asJsonObject(response, path);
   }
@@ -77,14 +78,17 @@ class ApiService {
     required FormData data,
     Map<String, dynamic>? queryParameters,
   }) async {
-    final response = await _dioClient.put(
+    final response = await _dioClient.dio.put(
       path,
       data: data,
       queryParameters: queryParameters,
-      options: Options(contentType: 'multipart/form-data'),
     );
     return _asJsonObject(response, path);
   }
+
+  
+
+
 
   Future<dynamic> delete(
     String path, {

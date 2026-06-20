@@ -497,6 +497,8 @@ class RideCubit extends Cubit<RideState> {
 
   /// Temporarily bypass proximity/accuracy guards during end-ride for indoor testing.
   static const bool bypassEndRideGuards = true;
+  
+  get endPhotoPath => null;
 
   Future<Position> _resolveCurrentPositionForEndRide() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -519,13 +521,41 @@ class RideCubit extends Cubit<RideState> {
     );
   }
 
+ // ✅ حط مكانه
   Future<Ride> endActiveRide({Uint8List? endPhotoBytes}) async {
-    final preview = _previewFromState();
+    var preview = _previewFromState();
+
+    // لو الـ cubit مش عارف الـ preview، جيبه من الـ RideService مباشرة
+    if (preview == null && _rideService.currentRide != null) {
+      final activeRide = _rideService.currentRide!;
+      preview = RidePreview(
+        serialNumber: activeRide.scooterCode,
+        scooter: Scooter(
+          id: activeRide.scooterCode,
+          code: activeRide.scooterCode,
+          lat: _rideService.latestState?.scooterPosition.latitude ?? 0,
+          lng: _rideService.latestState?.scooterPosition.longitude ?? 0,
+          batteryPercent: _rideService.latestState?.batteryPercent ?? 0,
+          isAvailable: false,
+          locationName: activeRide.fromName,
+          modelName: null,
+          rawStatus: 'Recovered',
+        ),
+        user: _backendService.currentUser ?? AppUser.empty(),
+        minimumRequiredBalance: minimumWalletBalance,
+        allowedUnlockRadiusMeters: unlockRadiusMeters,
+        distanceToScooterMeters: 0,
+      );
+      emit(RideInProgress(preview: preview, ride: activeRide));
+    }
+
     if (preview == null) {
       throw StateError('No active ride preview available to end.');
     }
 
-    if (endPhotoBytes == null || endPhotoBytes.isEmpty) {
+    // تأكيد إن الـ UI باعت أي داتا للصورة
+    if ((endPhotoBytes == null || endPhotoBytes.isEmpty) &&
+        (endPhotoPath == null || endPhotoPath.isEmpty)) {
       throw StateError('A parking photo is required to end the ride.');
     }
 
@@ -535,12 +565,17 @@ class RideCubit extends Cubit<RideState> {
       final position = bypassEndRideGuards
           ? await _resolveCurrentPositionForEndRide()
           : await _resolveCurrentPosition();
-_rideService.updateUserPosition(position.latitude, position.longitude);
+
+      _rideService.updateUserPosition(position.latitude, position.longitude);
+
+      // 💡 التعديل هنا: بنمرر الـ Path والـ Bytes للـ RideService
       final ride = await _rideService.endRide(
         userLatitude: position.latitude,
         userLongitude: position.longitude,
         endPhotoBytes: endPhotoBytes,
+        endPhotoPath: endPhotoPath, // 👈 باصي الـ Path الجديد هنا
       );
+
       emit(const RideInitial());
       return ride;
     } catch (error) {

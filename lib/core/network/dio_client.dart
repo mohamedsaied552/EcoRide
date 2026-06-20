@@ -60,6 +60,7 @@ class DioClient {
 
   final Dio _dio;
   final TokenStorage _tokenStorage;
+  Dio get dio => _dio;
 
   Future<Response<dynamic>> get(
     String path, {
@@ -144,7 +145,21 @@ class DioClient {
       debugPrint('API QUERY: ${options.queryParameters}');
     }
     if (options.data != null) {
-      debugPrint('API BODY: ${_sanitizeBody(options.data)}');
+      final data = options.data;
+      // 💡 إذا كان الطلب FormData، هنفصص الـ Fields والـ Files ونطبع أساميها (الـ Keys)
+      if (data is FormData) {
+        final fields = data.fields
+            .map((e) => '${e.key}: ${e.value}')
+            .join(', ');
+        final files = data.files
+            .map((e) => '${e.key}: <File: ${e.value.filename}>')
+            .join(', ');
+        debugPrint(
+          'API BODY (FormData) 👈 FIELDS: [$fields] | FILES: [$files]',
+        );
+      } else {
+        debugPrint('API BODY: ${_sanitizeBody(data)}');
+      }
     }
   }
 

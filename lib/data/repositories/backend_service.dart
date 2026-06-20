@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:glider/core/constants/app_constants.dart';
 import 'package:glider/core/errors/api_exception.dart';
 import 'package:glider/domain/entities/live_map_bundle.dart';
@@ -291,20 +292,29 @@ class BackendService {
     }
   }
 
-  Future<Ride> endActiveRide({
+ Future<Ride> endActiveRide({
     required double userLatitude,
     required double userLongitude,
     Uint8List? endPhotoBytes,
     String? endPhotoPath,
   }) async {
     MultipartFile? endPhoto;
+
+    // 💡 طباعة سريعة للتأكد من البيانات قبل التجهيز
+    debugPrint(
+      '📸 DEBUG END RIDE -> Path: $endPhotoPath | Bytes length: ${endPhotoBytes?.length}',
+    );
+
     if (endPhotoPath != null && endPhotoPath.isNotEmpty) {
       endPhoto = await MultipartFile.fromFile(
         endPhotoPath,
         filename: 'end_ride.jpg',
         contentType: DioMediaType.parse('image/jpeg'),
       );
-    } else if (endPhotoBytes != null && endPhotoBytes.isNotEmpty) {
+    }
+
+    // 💡 لو الـ Path مجابش نتيجة أو فاضي، بنجرب البايتس فوراً كخطة بديلة
+    if (endPhoto == null && endPhotoBytes != null && endPhotoBytes.isNotEmpty) {
       endPhoto = MultipartFile.fromBytes(
         endPhotoBytes,
         filename: 'end_ride.jpg',
@@ -312,10 +322,18 @@ class BackendService {
       );
     }
 
+    // تأكيد أخير: لو الـ endPhoto لسه بـ null، بنرمي خطأ محلي يفهمنا إن المشكلة من الـ UI
+    if (endPhoto == null) {
+      throw ApiException(
+        '⚠️ فلاتر: لم يتم التقاط الصورة بنجاح، الـ Path والـ Bytes كلاهما فارغ!',
+      );
+    }
+
+    // تجهيز الـ FormData بالمسميات الدقيقة
     final formData = FormData.fromMap(<String, dynamic>{
       'userLatitude': userLatitude,
       'userLongitude': userLongitude,
-      'endPhoto': ?endPhoto,
+      'EndPhoto': endPhoto, // 👈 شيلنا الـ if عشان نضمن إن الـ Key يتبعت حتماً
     });
 
     final data = await _apiService.multipartPost(
@@ -328,7 +346,6 @@ class BackendService {
     _currentUser = await fetchCurrentUser();
     return ride;
   }
-
   Future<AppUser> topUpWallet(double amount) async {
     _currentUser ??= await fetchCurrentUser();
 

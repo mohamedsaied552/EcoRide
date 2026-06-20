@@ -401,6 +401,7 @@ class RideService {
       throw StateError('No active ride to end.');
     }
 
+    // 1. وقف التايمر والـ WebSocket فوراً
     _tickTimer?.cancel();
     _tickTimer = null;
     await _webSocketSubscription?.cancel();
@@ -416,11 +417,22 @@ class RideService {
         _realUserPosition?.longitude ??
         _scooterPosition.longitude;
 
+    // 2. ابعت للباك إند ينهي الرحلة
     final completedRide = await _backend.endActiveRide(
       userLatitude: finalLat,
       userLongitude: finalLng,
+      endPhotoBytes: endPhotoBytes,
+      endPhotoPath: endPhotoPath,
     );
 
+    // 3. 💡 التعديل الأهم: صفّي الحالة هنا فوراً قبل أي نداءات تانية
+    _currentRide = null;
+    _activeScooter = null;
+    _realUserPosition = null;
+    _liveCost = 0;
+    _emitState(isActive: false); // 👈 دي اللي هترجع المستخدم للماب فوراً
+
+    // 4. قفل الـ Hardware يحصل براحته جوه الـ try-catch
     try {
       _userSnapshot = await _backend.fetchCurrentUser();
 
@@ -428,18 +440,14 @@ class RideService {
       final scooter = scooters
           .where((item) => item.code == ride.scooterCode)
           .firstOrNull;
+
+      // حتى لو السطر ده خد وقت أو فشل، المستخدم خلاص رجع للماب والأبلكيشن فك
       await _scooterService.lockScooter(scooter?.id ?? ride.scooterCode);
     } catch (error) {
       debugPrint(
         'RIDE: post end-ride cleanup failed (ride already ended): $error',
       );
     }
-
-    _currentRide = null;
-    _activeScooter = null;
-    _realUserPosition = null;
-    _liveCost = 0;
-    _emitState(isActive: false);
 
     return completedRide;
   }
