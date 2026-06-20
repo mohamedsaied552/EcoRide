@@ -45,23 +45,25 @@ class WebSocketService {
 
     final uri = _buildRideWebSocketUri(rideId: rideId, accessToken: token);
     debugPrint('WS: connecting to $uri');
+    
+    debugPrint('WS: backend does not support WebSocket — skipping connection.');
+    return;
+    // _channel = WebSocketChannel.connect(uri);
+    // _activeRideId = rideId;
 
-    _channel = WebSocketChannel.connect(uri);
-    _activeRideId = rideId;
-
-    _subscription = _channel!.stream.listen(
-      _handleMessage,
-      onError: (Object error, StackTrace stackTrace) {
-        debugPrint('WS ERROR: $error');
-        debugPrint('$stackTrace');
-      },
-      onDone: () {
-        debugPrint('WS: connection closed for ride=$rideId');
-        _channel = null;
-        _activeRideId = null;
-      },
-      cancelOnError: false,
-    );
+    // _subscription = _channel!.stream.listen(
+    //   _handleMessage,
+    //   onError: (Object error, StackTrace stackTrace) {
+    //     debugPrint('WS ERROR: $error');
+    //     debugPrint('$stackTrace');
+    //   },
+    //   onDone: () {
+    //     debugPrint('WS: connection closed for ride=$rideId');
+    //     _channel = null;
+    //     _activeRideId = null;
+    //   },
+    //   cancelOnError: false,
+    // );
   }
 
   Uri _buildRideWebSocketUri({

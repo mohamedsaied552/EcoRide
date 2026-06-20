@@ -213,4 +213,6 @@ class AppUser {
       'role': role.name,
     };
   }
+
+  static empty() {}
 }
