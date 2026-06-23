@@ -9,7 +9,7 @@ import 'package:glider/domain/entities/ride.dart';
 import 'package:glider/domain/entities/scooter.dart';
 import 'package:glider/domain/entities/user.dart';
 import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/data/services/websocket_service.dart';
+import 'package:glider/data/services/ride_hub_service.dart';
 import 'geofence_service.dart';
 import 'iot_service.dart';
 import 'package:glider/data/services/scooter_service.dart';
@@ -77,7 +77,7 @@ class RideService {
   final ScooterService _scooterService = ScooterService();
   final IoTService _iot = IoTService();
   final GeofenceService _geofence = GeofenceService();
-  final WebSocketService _webSocket = WebSocketService();
+  final RideHubService _webSocket = RideHubService();
 
   static const double pricePerMinute = 1.0; // EGP per minute
   static const double minimumWalletToStart = 10.0; // EGP
@@ -242,13 +242,15 @@ class RideService {
     _webSocketSubscription = null;
 
     try {
-      await _webSocket.connect(rideId: rideId);
-      _webSocketSubscription = _webSocket.updates.listen(
+      await _webSocket.connect(); // ← SignalR connect
+      await _webSocket.joinRide(rideId); // ← join the group
+      _webSocketSubscription = _webSocket.rideUpdates.listen(
+        // ← rideUpdates (مش updates)
         (update) => _applyLiveRideUpdate(update, scooter),
         onError: (_) {},
       );
     } catch (error) {
-      // Fall back to local polling when the WebSocket endpoint is unavailable.
+      debugPrint('SignalR: failed to start live updates: $error');
     }
   }
 
@@ -406,8 +408,8 @@ class RideService {
     _tickTimer = null;
     await _webSocketSubscription?.cancel();
     _webSocketSubscription = null;
+    await _webSocket.leaveRide(ride.id);
     await _webSocket.disconnect();
-
     final finalLat =
         userLatitude ??
         _realUserPosition?.latitude ??
