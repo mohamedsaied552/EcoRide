@@ -23,7 +23,6 @@ import 'package:glider/presentation/screens/splash_screen.dart';
 import 'package:glider/presentation/screens/wallet_screen.dart';
 import 'firebase_options.dart';
 
-
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();

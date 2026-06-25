@@ -31,13 +31,15 @@ dependencies:
   firebase_auth: ^6.5.2
   signalr_netcore: ^1.4.4
   flutter_launcher_icons: ^0.13.1
+  camera: ^0.12.0
+  image: ^4.8.0
 
 # إعدادات الأيقونة
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/images/app_icon.png"
-  min_sdk_android: 21 
+  min_sdk_android: 21
 
 dev_dependencies:
   flutter_test:

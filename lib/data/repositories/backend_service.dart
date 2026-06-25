@@ -91,7 +91,8 @@ class BackendService {
     );
   }
 
-  Future<AppUser> fetchCurrentUser() async {
+  Future<AppUser> fetchCurrentUser({bool forceRefresh = false}) async {
+    if (!forceRefresh && _currentUser != null) return _currentUser!;
     final user = await _authService.getProfile();
     _currentUser = user;
     return user;
@@ -343,7 +344,7 @@ class BackendService {
 
     final ride = Ride.fromJson(data);
     _upsertRide(ride);
-    _currentUser = await fetchCurrentUser();
+    _currentUser = await fetchCurrentUser(forceRefresh: true);
     return ride;
   }
   Future<AppUser> topUpWallet(double amount) async {

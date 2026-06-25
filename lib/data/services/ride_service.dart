@@ -79,10 +79,8 @@ class RideService {
   final GeofenceService _geofence = GeofenceService();
   final RideHubService _webSocket = RideHubService();
 
-  static const double pricePerMinute = 1.0; // EGP per minute
-  static const double minimumWalletToStart = 10.0; // EGP
-
-  /// Temporarily disabled for indoor/dev testing.
+  static const double pricePerMinute = 1.0;
+  static const double minimumWalletToStart = 10.0;
   static const bool bypassGeofenceChecks = true;
 
   Ride? _currentRide;
@@ -101,6 +99,11 @@ class RideService {
   bool _outsideGeofence = false;
   LatLng? _realUserPosition;
   int _secondsOutsideGeofence = 0;
+
+  // ✅ FIX: منع تراكم الـ async ticks
+  bool _isTicking = false;
+  // ✅ FIX: عداد للـ fallback API calls (كل 10 ثواني بس)
+  int _tickCount = 0;
 
   final StreamController<RideSessionState> _stateController =
       StreamController<RideSessionState>.broadcast();
@@ -130,7 +133,7 @@ class RideService {
       return _currentRide!;
     }
 
-    final user = await _backend.fetchCurrentUser();
+    final user = await _backend.fetchCurrentUser(forceRefresh: false);
     _userSnapshot = user;
     if (user.walletBalance < minimumWalletToStart) {
       throw StateError(
@@ -175,6 +178,8 @@ class RideService {
     _lowBalance = false;
     _outsideGeofence = false;
     _secondsOutsideGeofence = 0;
+    _isTicking = false;
+    _tickCount = 0;
 
     await _startLiveUpdates(ride.id, scooter);
     _emitState(isActive: true);
@@ -227,6 +232,8 @@ class RideService {
     _lowBalance = false;
     _outsideGeofence = false;
     _secondsOutsideGeofence = 0;
+    _isTicking = false;
+    _tickCount = 0;
 
     await _startLiveUpdates(activeRide.id, scooter);
     _emitState(isActive: true);
@@ -242,10 +249,9 @@ class RideService {
     _webSocketSubscription = null;
 
     try {
-      await _webSocket.connect(); // ← SignalR connect
-      await _webSocket.joinRide(rideId); // ← join the group
+      await _webSocket.connect();
+      await _webSocket.joinRide(rideId);
       _webSocketSubscription = _webSocket.rideUpdates.listen(
-        // ← rideUpdates (مش updates)
         (update) => _applyLiveRideUpdate(update, scooter),
         onError: (_) {},
       );
@@ -297,29 +303,37 @@ class RideService {
   void _onTick([Scooter? scooter]) async {
     if (_currentRide == null) return;
 
-    if (!_webSocket.isConnected) {
-      _duration = DateTime.now().difference(_currentRide!.startedAt);
+    // ✅ FIX 1: الـ duration دايمًا يتحدث كل ثانية بدون API
+    _duration = DateTime.now().difference(_currentRide!.startedAt);
+    _tickCount++;
 
-      final activeScooter = scooter ?? _activeScooter;
-      final LatLng newPos = activeScooter != null
-          ? await _scooterService.getScooterLocation(
-              activeScooter.id,
-              fallback: _scooterPosition,
-            )
-          : _scooterPosition;
+    // ✅ FIX 2: لو SignalR مش شغال، اعمل fallback API كل 10 ثواني بس
+    if (!_webSocket.isConnected && _tickCount % 10 == 0) {
+      // ✅ FIX 3: منع تراكم الـ async calls
+      if (_isTicking) return;
+      _isTicking = true;
 
-      if (activeScooter != null) {
-        _distanceKm += _incrementalDistance(_scooterPosition, newPos);
-        _scooterPosition = newPos;
-        _route.add(newPos);
-        _batteryPercent = await _scooterService.getScooterBattery(
-          activeScooter.id,
-          initial: activeScooter.batteryPercent,
-        );
-        _userPosition = LatLng(
-          _scooterPosition.latitude + 0.0001,
-          _scooterPosition.longitude + 0.0001,
-        );
+      try {
+        final activeScooter = scooter ?? _activeScooter;
+        if (activeScooter != null) {
+          final newPos = await _scooterService.getScooterLocation(
+            activeScooter.id,
+            fallback: _scooterPosition,
+          );
+          _distanceKm += _incrementalDistance(_scooterPosition, newPos);
+          _scooterPosition = newPos;
+          _route.add(newPos);
+          _batteryPercent = await _scooterService.getScooterBattery(
+            activeScooter.id,
+            initial: activeScooter.batteryPercent,
+          );
+          _userPosition = LatLng(
+            _scooterPosition.latitude + 0.0001,
+            _scooterPosition.longitude + 0.0001,
+          );
+        }
+      } finally {
+        _isTicking = false;
       }
     }
 
@@ -361,7 +375,7 @@ class RideService {
     final a =
         sinDLat * sinDLat + sinDLon * sinDLon * math.cos(lat1) * math.cos(lat2);
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    return (earthRadius * c) / 1000.0; // km
+    return (earthRadius * c) / 1000.0;
   }
 
   double _degToRad(double deg) => deg * math.pi / 180.0;
@@ -403,13 +417,15 @@ class RideService {
       throw StateError('No active ride to end.');
     }
 
-    // 1. وقف التايمر والـ WebSocket فوراً
     _tickTimer?.cancel();
     _tickTimer = null;
+    _isTicking = false;
+    _tickCount = 0;
     await _webSocketSubscription?.cancel();
     _webSocketSubscription = null;
     await _webSocket.leaveRide(ride.id);
     await _webSocket.disconnect();
+
     final finalLat =
         userLatitude ??
         _realUserPosition?.latitude ??
@@ -419,7 +435,6 @@ class RideService {
         _realUserPosition?.longitude ??
         _scooterPosition.longitude;
 
-    // 2. ابعت للباك إند ينهي الرحلة
     final completedRide = await _backend.endActiveRide(
       userLatitude: finalLat,
       userLongitude: finalLng,
@@ -427,14 +442,12 @@ class RideService {
       endPhotoPath: endPhotoPath,
     );
 
-    // 3. 💡 التعديل الأهم: صفّي الحالة هنا فوراً قبل أي نداءات تانية
     _currentRide = null;
     _activeScooter = null;
     _realUserPosition = null;
     _liveCost = 0;
-    _emitState(isActive: false); // 👈 دي اللي هترجع المستخدم للماب فوراً
+    _emitState(isActive: false);
 
-    // 4. قفل الـ Hardware يحصل براحته جوه الـ try-catch
     try {
       _userSnapshot = await _backend.fetchCurrentUser();
 
@@ -443,7 +456,6 @@ class RideService {
           .where((item) => item.code == ride.scooterCode)
           .firstOrNull;
 
-      // حتى لو السطر ده خد وقت أو فشل، المستخدم خلاص رجع للماب والأبلكيشن فك
       await _scooterService.lockScooter(scooter?.id ?? ride.scooterCode);
     } catch (error) {
       debugPrint(

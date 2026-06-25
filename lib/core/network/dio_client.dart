@@ -56,6 +56,16 @@ class DioClient {
         },
       ),
     );
+    _dio.interceptors.add(
+      LogInterceptor(
+        request: true,
+        requestBody: true,
+        responseBody: true,
+        requestHeader: true,
+        responseHeader: false,
+        error: true,
+      ),
+    );
   }
 
   final Dio _dio;

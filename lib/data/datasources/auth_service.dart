@@ -21,10 +21,7 @@ class AuthService {
   }) async {
     final data = await _apiService.post(
       '/Auth/login',
-      data: <String, dynamic>{
-        'phoneNumber': phoneNumber,
-        'password': password,
-      },
+      data: <String, dynamic>{'phoneNumber': phoneNumber, 'password': password},
     );
 
     final result = AuthResult.fromJson(data);

@@ -23,6 +23,9 @@ class MapRefreshRequestedEvent extends AppEvent {
 class UserLoggedOutEvent extends AppEvent {
   const UserLoggedOutEvent();
 }
+class WalletRefreshRequestedEvent extends AppEvent {
+  const WalletRefreshRequestedEvent();
+}
 
 class AppEventBus {
   final StreamController<AppEvent> _controller =

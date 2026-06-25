@@ -53,9 +53,7 @@ class NotificationManager {
       provisional: false,
     );
 
-    debugPrint(
-      'FCM permission status: ${settings.authorizationStatus.name}',
-    );
+    debugPrint('FCM permission status: ${settings.authorizationStatus.name}');
 
     _attachListenersOnce();
 
@@ -149,12 +147,12 @@ class NotificationManager {
     _foregroundSubscription = FirebaseMessaging.onMessage.listen((message) {
       debugPrint('Received a message in the FOREGROUND!');
 
-      final title = message.notification?.title ??
+      final title =
+          message.notification?.title ??
           message.data['title']?.toString() ??
           '';
-      final body = message.notification?.body ??
-          message.data['body']?.toString() ??
-          '';
+      final body =
+          message.notification?.body ?? message.data['body']?.toString() ?? '';
 
       if (title.isNotEmpty || body.isNotEmpty) {
         unawaited(
@@ -200,6 +198,7 @@ class NotificationManager {
     if (data['action']?.toString().toLowerCase() == 'refresh_map') {
       _eventBus.publish(const MapRefreshRequestedEvent());
     }
+    
   }
 
   Future<void> _showForegroundNotification({

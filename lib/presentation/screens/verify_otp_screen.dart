@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:glider/data/services/ride_hub_service.dart';
 
 import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/cubits/verify_otp_cubit.dart';
+import 'package:glider/presentation/cubits/wallet_cubit.dart';
 import 'package:glider/core/notifications/notification_manager.dart';
 import 'package:glider/data/datasources/firebase_auth_service.dart';
 import 'package:glider/presentation/utils/firebase_auth_error_utils.dart';
@@ -129,6 +131,16 @@ class _VerifyOtpView extends StatelessWidget {
           if (state.flow == VerifyOtpFlow.login && state.verifiedUser != null) {
             final user = state.verifiedUser!;
             context.read<UserCubit>().applyAuthenticatedUser(user);
+            try {
+              await RideHubService().connect();
+            } catch (e) {
+              debugPrint('SignalR connect failed: $e');
+            }
+            unawaited(
+              context.read<WalletCubit>().initialize(
+                initialBalance: user.walletBalance,
+              ),
+            );
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -136,9 +148,10 @@ class _VerifyOtpView extends StatelessWidget {
                 backgroundColor: const Color(0xFF1FAE6C),
               ),
             );
-            unawaited(
-              GetIt.I<NotificationManager>().syncTokenWithServer(),
-            );
+            unawaited(GetIt.I<NotificationManager>().syncTokenWithServer());
+            await RideHubService().connect(); // ← ADD THIS
+            debugPrint('SIGNALR CONNECT START → done'); // ← temporary debug log
+            unawaited(context.read<WalletCubit>().initialize());
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const MapScreen()),
               (route) => false,
@@ -312,7 +325,6 @@ class _VerifyOtpView extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _ResendRow extends StatelessWidget {

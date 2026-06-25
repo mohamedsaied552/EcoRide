@@ -286,6 +286,19 @@ class RegisterCubit extends Cubit<RegisterState> {
     }
   }
 
+  void setIdImageBytes({
+    required RegisterImageSide side,
+    required Uint8List bytes,
+    required String fileName,
+  }) {
+    final image = PickedImageData(bytes: bytes, fileName: fileName);
+    if (side == RegisterImageSide.front) {
+      emit(state.copyWith(frontIdImage: image, clearImageError: true));
+    } else {
+      emit(state.copyWith(backIdImage: image, clearImageError: true));
+    }
+  }
+
   void clearSelectedIdImage(RegisterImageSide side) {
     if (side == RegisterImageSide.front) {
       emit(state.copyWith(clearFrontId: true, clearImageError: true));

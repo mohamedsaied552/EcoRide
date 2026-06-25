@@ -19,8 +19,6 @@ class FcmTokenRemoteDataSourceImpl implements FcmTokenRemoteDataSource {
       throw ArgumentError('FCM token must not be empty');
     }
 
-    await _apiClient.put('/Auth/fcm-token', <String, dynamic>{
-      'token': token,
-    });
+    await _apiClient.put('/Auth/fcm-token', <String, dynamic>{'token': token});
   }
 }

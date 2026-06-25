@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/topup_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
+import 'package:glider/presentation/cubits/wallet_cubit.dart';
 import 'package:glider/presentation/widgets/loading_spinner.dart';
 import 'topup_screen.dart';
 
@@ -15,21 +16,23 @@ class WalletScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return BlocBuilder<UserCubit, UserState>(
-      builder: (context, state) {
-        if (state.status == UserStatus.loading) {
+      builder: (context, userState) {
+        if (userState.status == UserStatus.loading) {
           return Scaffold(
             body: LoadingSpinner(message: l10n.loadingBalance),
           );
         }
 
-        final user = state.user;
+        final user = userState.user;
+        return BlocBuilder<WalletCubit, WalletState>(
+          builder: (context, walletState) {
         return Scaffold(
           appBar: AppBar(title: Text(l10n.wallet)),
           body: Padding(
             padding: const EdgeInsets.all(20),
             child: user == null
                 ? Center(
-                    child: Text(state.errorMessage ?? l10n.pleaseLoginFirst),
+                    child: Text(userState.errorMessage ?? l10n.pleaseLoginFirst),
                   )
                 : Column(
                     children: [
@@ -46,7 +49,7 @@ class WalletScreen extends StatelessWidget {
                               const SizedBox(height: 8),
                               Text(
                                 l10n.costEgp(
-                                  user.walletBalance.toStringAsFixed(0),
+                                  walletState.balance.toStringAsFixed(0),
                                 ),
                                 style: const TextStyle(
                                   fontSize: 28,
@@ -84,6 +87,8 @@ class WalletScreen extends StatelessWidget {
                     ],
                   ),
           ),
+        );
+          },
         );
       },
     );

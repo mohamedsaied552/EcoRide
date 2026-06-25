@@ -50,7 +50,8 @@ class DefaultFirebaseOptions {
     projectId: 'ecoride-1229d',
     databaseURL: 'https://ecoride-1229d-default-rtdb.firebaseio.com',
     storageBucket: 'ecoride-1229d.firebasestorage.app',
-    iosClientId: '66760687862-0rahmcr0pelkhtlfehuoi3bqm1veemve.apps.googleusercontent.com',
+    iosClientId:
+        '66760687862-0rahmcr0pelkhtlfehuoi3bqm1veemve.apps.googleusercontent.com',
     iosBundleId: 'com.glider.scooter',
   );
 

@@ -24,10 +24,7 @@ enum FirebaseAuthErrorCode {
 }
 
 class FirebaseAuthFailure implements Exception {
-  const FirebaseAuthFailure({
-    required this.code,
-    this.rawMessage,
-  });
+  const FirebaseAuthFailure({required this.code, this.rawMessage});
 
   final FirebaseAuthErrorCode code;
   final String? rawMessage;
@@ -38,7 +35,8 @@ class FirebaseAuthFailure implements Exception {
       'email-already-in-use' => FirebaseAuthErrorCode.emailAlreadyInUse,
       'invalid-email' => FirebaseAuthErrorCode.invalidEmail,
       'invalid-phone-number' => FirebaseAuthErrorCode.invalidPhoneNumber,
-      'invalid-verification-code' => FirebaseAuthErrorCode.invalidVerificationCode,
+      'invalid-verification-code' =>
+        FirebaseAuthErrorCode.invalidVerificationCode,
       'session-expired' => FirebaseAuthErrorCode.sessionExpired,
       'operation-not-allowed' => FirebaseAuthErrorCode.operationNotAllowed,
       'network-request-failed' => FirebaseAuthErrorCode.network,
@@ -49,10 +47,7 @@ class FirebaseAuthFailure implements Exception {
       _ => FirebaseAuthErrorCode.unknown,
     };
 
-    return FirebaseAuthFailure(
-      code: code,
-      rawMessage: exception.message,
-    );
+    return FirebaseAuthFailure(code: code, rawMessage: exception.message);
   }
 
   static const noCurrentUser = FirebaseAuthFailure(
@@ -142,7 +137,8 @@ class FirebaseAuthService {
           // [SmsRetrieverHelper] auto-retrieval timeout on Android.
           session = PhoneVerificationSession(
             verificationId: verificationId,
-            forceResendingToken: session?.forceResendingToken ?? forceResendingToken,
+            forceResendingToken:
+                session?.forceResendingToken ?? forceResendingToken,
           );
           if (!completer.isCompleted) {
             completer.complete(session!);
@@ -201,10 +197,7 @@ class FirebaseAuthService {
     }
   }
 
-  AppUser? getCurrentAppUser({
-    String? fullName,
-    String? phone,
-  }) {
+  AppUser? getCurrentAppUser({String? fullName, String? phone}) {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
       return null;

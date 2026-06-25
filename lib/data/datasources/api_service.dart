@@ -86,10 +86,6 @@ class ApiService {
     return _asJsonObject(response, path);
   }
 
-  
-
-
-
   Future<dynamic> delete(
     String path, {
     Map<String, dynamic>? data,

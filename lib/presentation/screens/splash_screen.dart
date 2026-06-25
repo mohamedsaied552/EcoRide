@@ -1,9 +1,11 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:glider/data/services/ride_hub_service.dart';
 import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
+import 'package:glider/presentation/cubits/wallet_cubit.dart';
 import 'package:glider/presentation/screens/active_ride_screen.dart';
 import 'onboarding_screen.dart';
 
@@ -24,6 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _performStartupCheck() async {
     final userCubit = context.read<UserCubit>();
     final rideCubit = context.read<RideCubit>();
+    final walletCubit = context.read<WalletCubit>();
 
     final isAuthenticated = await userCubit.restoreSession();
     if (!mounted) return;
@@ -36,6 +39,21 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
+    
+try {
+      await RideHubService().connect();
+    } catch (e) {
+      debugPrint('SignalR connect failed: $e');
+    }
+
+    // Pass balance from already-fetched user profile
+    unawaited(
+      walletCubit.initialize(
+        initialBalance: userCubit.state.user?.walletBalance,
+      ),
+    );
+
+
     await rideCubit.appStartedCheck(currentUser: userCubit.state.user);
     if (!mounted) return;
 
@@ -44,9 +62,8 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ActiveRideScreen(
-            scooterCode: rideState.preview.serialNumber,
-          ),
+          builder: (_) =>
+              ActiveRideScreen(scooterCode: rideState.preview.serialNumber),
         ),
       );
       return;

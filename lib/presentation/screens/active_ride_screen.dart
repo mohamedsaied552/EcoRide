@@ -15,6 +15,7 @@ import 'package:glider/domain/entities/map_zone.dart';
 import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
+import 'package:glider/presentation/cubits/wallet_cubit.dart';
 import 'package:glider/presentation/screens/ride_summary_screen.dart';
 
 class ActiveRideScreen extends StatefulWidget {
@@ -343,7 +344,13 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
       );
       if (!mounted) return;
 
-      await context.read<UserCubit>().loadCurrentUser();
+      final user = _backendService.currentUser ??
+          await _backendService.fetchCurrentUser(forceRefresh: true);
+      if (!mounted) return;
+
+      final remainingBalance = user.walletBalance;
+      context.read<UserCubit>().applyAuthenticatedUser(user);
+      context.read<WalletCubit>().updateBalance(remainingBalance);
 
       final route = _rideService.latestState?.route ?? [];
       if (!mounted) return;
@@ -353,7 +360,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
           builder: (_) => RideSummaryScreen(
             ride: ride,
             route: route,
-            remainingBalance: null,
+            remainingBalance: remainingBalance,
           ),
         ),
       );

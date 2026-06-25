@@ -1,14 +1,16 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/register_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
+import 'package:glider/presentation/cubits/wallet_cubit.dart';
 import 'package:glider/presentation/utils/register_flow_utils.dart';
 import 'package:glider/presentation/screens/map_screen.dart';
+import 'package:glider/presentation/screens/selfie_camera_capture_screen.dart';
 
 class SelfieVerificationScreen extends StatefulWidget {
   const SelfieVerificationScreen({super.key});
@@ -22,25 +24,17 @@ class SelfieVerificationScreen extends StatefulWidget {
 }
 
 class _SelfieVerificationScreenState extends State<SelfieVerificationScreen> {
-  final ImagePicker _picker = ImagePicker();
   Uint8List? _selfieBytes;
   bool _isCapturing = false;
 
   Future<void> _captureSelfie() async {
     setState(() => _isCapturing = true);
     try {
-      final image = await _picker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front,
-        imageQuality: 85,
-        maxWidth: 1280,
+      final bytes = await Navigator.push<Uint8List>(
+        context,
+        MaterialPageRoute(builder: (_) => const SelfieCameraCaptureScreen()),
       );
       if (!mounted) return;
-      if (image == null) {
-        setState(() => _isCapturing = false);
-        return;
-      }
-      final bytes = await image.readAsBytes();
       setState(() {
         _selfieBytes = bytes;
         _isCapturing = false;
@@ -98,6 +92,8 @@ class _SelfieVerificationScreenState extends State<SelfieVerificationScreen> {
               backgroundColor: const Color(0xFF1FAE6C),
             ),
           );
+          // ✅ FIX 5: Initialize wallet after registration
+          unawaited(context.read<WalletCubit>().initialize());
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const MapScreen()),
             (route) => false,
@@ -200,7 +196,8 @@ class _SelfieVerificationScreenState extends State<SelfieVerificationScreen> {
                         flex: 2,
                         child: BlocBuilder<RegisterCubit, RegisterState>(
                           builder: (context, state) {
-                            final isLoading = state.submissionStatus ==
+                            final isLoading =
+                                state.submissionStatus ==
                                 RegisterSubmissionStatus.loading;
                             return SizedBox(
                               height: 54,
@@ -269,10 +266,7 @@ class _CameraFrame extends StatelessWidget {
         height: frameSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(
-            color: SelfieVerificationScreen.accent,
-            width: 3,
-          ),
+          border: Border.all(color: SelfieVerificationScreen.accent, width: 3),
           boxShadow: [
             BoxShadow(
               color: SelfieVerificationScreen.accent.withValues(alpha: 0.35),
@@ -295,8 +289,9 @@ class _CameraFrame extends StatelessWidget {
                       : Icon(
                           Icons.face_retouching_natural,
                           size: 72,
-                          color: SelfieVerificationScreen.accent
-                              .withValues(alpha: 0.5),
+                          color: SelfieVerificationScreen.accent.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                 ),
         ),

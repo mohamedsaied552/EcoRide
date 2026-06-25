@@ -1,13 +1,12 @@
-//import 'package:flutter/foundation.dart';
-
 class AppConstants {
   const AppConstants._();
 
-  // static String get baseUrl =>
-  //     kIsWeb ? 'http://localhost:5001/api' : 'http://10.0.2.2:5001/api';
   static const String baseUrl =
       'https://releasable-unrecessive-adam.ngrok-free.dev/api';
- 
+
+  // Base without /api, used for SignalR hubs
+  static const String hubBaseUrl =
+      'https://releasable-unrecessive-adam.ngrok-free.dev';
 
   static const String bearerPrefix = 'Bearer';
   static const String accessTokenKey = 'access_token';

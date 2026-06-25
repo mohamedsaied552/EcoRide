@@ -1,3 +1,4 @@
+// lib/data/services/ride_hub_service.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:signalr_netcore/signalr_client.dart';
@@ -6,8 +7,11 @@ import 'package:glider/core/storage/token_storage.dart';
 import 'package:glider/domain/entities/live_ride_update.dart';
 
 class RideHubService {
-  RideHubService({TokenStorage? tokenStorage})
+  RideHubService._internal({TokenStorage? tokenStorage})
     : _tokenStorage = tokenStorage ?? TokenStorage();
+
+  static final RideHubService _instance = RideHubService._internal();
+  factory RideHubService({TokenStorage? tokenStorage}) => _instance;
 
   final TokenStorage _tokenStorage;
   HubConnection? _connection;
@@ -15,7 +19,6 @@ class RideHubService {
 
   final StreamController<LiveRideUpdate> _updatesController =
       StreamController<LiveRideUpdate>.broadcast();
-
   final StreamController<double> _walletController =
       StreamController<double>.broadcast();
 
@@ -34,7 +37,8 @@ class RideHubService {
       throw StateError('No access token for SignalR connection.');
     }
 
-    final hubUrl = '${AppConstants.baseUrl}/hubs/rider';
+    final hubUrl =
+        '${AppConstants.baseUrl.replaceFirst(RegExp(r'/api$'), '')}/hubs/rider';
 
     _connection = HubConnectionBuilder()
         .withUrl(
@@ -58,6 +62,7 @@ class RideHubService {
       if (args == null || args.isEmpty) return;
       try {
         final balance = (args[0] as num).toDouble();
+        debugPrint('SignalR: WalletBalanceUpdated -> $balance');
         _walletController.add(balance);
       } catch (e) {
         debugPrint('SignalR: failed to parse wallet update: $e');
@@ -69,11 +74,11 @@ class RideHubService {
       _activeRideId = null;
     });
 
+    debugPrint('SIGNALR CONNECT START');
     await _connection!.start();
-    debugPrint('SignalR: connected to $hubUrl');
+    debugPrint('SIGNALR CONNECTED');
   }
 
-  /// Call IMMEDIATELY after API returns rideId on unlock.
   Future<void> joinRide(String rideId) async {
     _ensureConnected();
     await _connection!.invoke('JoinRideGroup', args: [rideId]);
@@ -81,12 +86,11 @@ class RideHubService {
     debugPrint('SignalR: joined ride group $rideId');
   }
 
-  /// Call when ride ends.
   Future<void> leaveRide(String rideId) async {
     if (_connection?.state != HubConnectionState.Connected) {
       debugPrint('SignalR: not connected, skipping leaveRide');
       _activeRideId = null;
-      return; // ← مش بترمي exception
+      return;
     }
     await _connection!.invoke('LeaveRideGroup', args: [rideId]);
     _activeRideId = null;

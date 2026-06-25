@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/topup_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
+import 'package:glider/presentation/cubits/wallet_cubit.dart';
 import 'package:glider/presentation/screens/topup_payment_screen.dart';
 
 class TopUpScreen extends StatefulWidget {
@@ -104,6 +105,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
 
           final navigator = Navigator.of(context);
           final userCubit = context.read<UserCubit>();
+          final walletCubit = context.read<WalletCubit>();
 
           final finished = await navigator.push<bool>(
             MaterialPageRoute(
@@ -114,6 +116,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
           if (!mounted) return;
           _isNavigatingToPayment = false;
           await userCubit.loadCurrentUser();
+          //await walletCubit.loadBalance();
 
           if (mounted) {
             if (finished == null || finished == true) {

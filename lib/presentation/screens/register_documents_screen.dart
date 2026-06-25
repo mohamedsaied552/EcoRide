@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:glider/l10n/app_localizations.dart';
 import 'package:glider/presentation/cubits/register_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
+import 'package:glider/presentation/screens/id_camera_capture_screen.dart';
 import 'package:glider/presentation/screens/selfie_verification_screen.dart';
 import 'package:glider/presentation/utils/register_flow_utils.dart';
 import 'package:glider/presentation/widgets/id_upload_card.dart';
@@ -13,6 +16,30 @@ import 'map_screen.dart';
 
 class RegisterDocumentsScreen extends StatelessWidget {
   const RegisterDocumentsScreen({super.key});
+
+  Future<void> _captureId(
+    BuildContext context,
+    RegisterCubit cubit,
+    RegisterImageSide side,
+  ) async {
+    final bytes = await Navigator.push<Uint8List>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => IdCameraCaptureScreen(
+          side: side == RegisterImageSide.front ? IdSide.front : IdSide.back,
+        ),
+      ),
+    );
+    if (bytes != null) {
+      cubit.setIdImageBytes(
+        side: side,
+        bytes: bytes,
+        fileName: side == RegisterImageSide.front
+            ? 'front_id.jpg'
+            : 'back_id.jpg',
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,10 +81,9 @@ class RegisterDocumentsScreen extends StatelessWidget {
                   children: [
                     Text(
                       l10n.uploadIdTitle,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
-                          ?.copyWith(fontSize: 28),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineSmall?.copyWith(fontSize: 28),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -88,10 +114,8 @@ class RegisterDocumentsScreen extends StatelessWidget {
                       errorText: state.imageError != null && !state.hasFrontId
                           ? localizeRegisterImageError(l10n, state.imageError)
                           : null,
-                      onCameraTap: () => cubit.pickIdImage(
-                        side: RegisterImageSide.front,
-                        source: ImageSource.camera,
-                      ),
+                      onCameraTap: () =>
+                          _captureId(context, cubit, RegisterImageSide.front),
                       onGalleryTap: () => cubit.pickIdImage(
                         side: RegisterImageSide.front,
                         source: ImageSource.gallery,
@@ -111,10 +135,8 @@ class RegisterDocumentsScreen extends StatelessWidget {
                       errorText: state.imageError != null && !state.hasBackId
                           ? localizeRegisterImageError(l10n, state.imageError)
                           : null,
-                      onCameraTap: () => cubit.pickIdImage(
-                        side: RegisterImageSide.back,
-                        source: ImageSource.camera,
-                      ),
+                      onCameraTap: () =>
+                          _captureId(context, cubit, RegisterImageSide.back),
                       onGalleryTap: () => cubit.pickIdImage(
                         side: RegisterImageSide.back,
                         source: ImageSource.gallery,
