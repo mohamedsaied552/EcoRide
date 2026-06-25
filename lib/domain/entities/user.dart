@@ -214,5 +214,6 @@ class AppUser {
     };
   }
 
+  // ignore: strict_top_level_inference
   static empty() {}
 }

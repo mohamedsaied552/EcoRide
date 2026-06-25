@@ -498,6 +498,7 @@ class RideCubit extends Cubit<RideState> {
   /// Temporarily bypass proximity/accuracy guards during end-ride for indoor testing.
   static const bool bypassEndRideGuards = true;
   
+  // ignore: strict_top_level_inference
   get endPhotoPath => null;
 
   Future<Position> _resolveCurrentPositionForEndRide() async {

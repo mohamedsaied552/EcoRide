@@ -137,6 +137,7 @@ class _VerifyOtpView extends StatelessWidget {
               debugPrint('SignalR connect failed: $e');
             }
             unawaited(
+              // ignore: use_build_context_synchronously
               context.read<WalletCubit>().initialize(
                 initialBalance: user.walletBalance,
               ),
@@ -151,7 +152,9 @@ class _VerifyOtpView extends StatelessWidget {
             unawaited(GetIt.I<NotificationManager>().syncTokenWithServer());
             await RideHubService().connect(); // ← ADD THIS
             debugPrint('SIGNALR CONNECT START → done'); // ← temporary debug log
+            // ignore: use_build_context_synchronously
             unawaited(context.read<WalletCubit>().initialize());
+            // ignore: use_build_context_synchronously
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const MapScreen()),
               (route) => false,
