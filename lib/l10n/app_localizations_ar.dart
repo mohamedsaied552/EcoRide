@@ -599,6 +599,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get selfieRequired => 'يرجى التقاط سيلفي للمتابعة.';
 
   @override
+  String get manualNationalIdTitle => 'أدخل الرقم القومي';
+
+  @override
+  String get manualNationalIdSubtitle =>
+      'لم نتمكن من قراءة البطاقة تلقائيًا. من فضلك اكتب الرقم القومي المكوّن من 14 رقم.';
+
+  @override
+  String get manualNationalIdHint => 'الرقم القومي (14 رقم)';
+
+  @override
+  String get manualNationalIdInvalid => 'أدخل رقمًا صحيحًا من 14 خانة.';
+
+  @override
   String get selfieCaptureError =>
       'فشل التقاط السيلفي. يرجى المحاولة مرة أخرى.';
 

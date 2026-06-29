@@ -498,8 +498,7 @@ class RideCubit extends Cubit<RideState> {
   /// Temporarily bypass proximity/accuracy guards during end-ride for indoor testing.
   static const bool bypassEndRideGuards = true;
   
-  // ignore: strict_top_level_inference
-  get endPhotoPath => null;
+  Null get endPhotoPath => null;
 
   Future<Position> _resolveCurrentPositionForEndRide() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -522,7 +521,6 @@ class RideCubit extends Cubit<RideState> {
     );
   }
 
- // ✅ حط مكانه
   Future<Ride> endActiveRide({Uint8List? endPhotoBytes}) async {
     var preview = _previewFromState();
 
@@ -556,7 +554,7 @@ class RideCubit extends Cubit<RideState> {
 
     // تأكيد إن الـ UI باعت أي داتا للصورة
     if ((endPhotoBytes == null || endPhotoBytes.isEmpty) &&
-        (endPhotoPath == null || endPhotoPath.isEmpty)) {
+        (endPhotoPath == null)) {
       throw StateError('A parking photo is required to end the ride.');
     }
 

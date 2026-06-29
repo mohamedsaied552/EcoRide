@@ -19,6 +19,7 @@ enum RegisterSubmissionStatus {
   loading,
   success,
   failure,
+  requiresManualId,
 }
 
 enum RegisterImageSide { front, back }
@@ -317,7 +318,7 @@ class RegisterCubit extends Cubit<RegisterState> {
   }
 
   /// Final POST /api/Auth/register after OTP + document capture.
-  Future<void> submitRegistration() async {
+  Future<void> submitRegistration({String? manualNationalId}) async {
     if (!state.isPhoneVerified) {
       emit(
         state.copyWith(
@@ -355,6 +356,7 @@ class RegisterCubit extends Cubit<RegisterState> {
         idFrontPhotoBytes: state.frontIdBytes!,
         idBackPhotoBytes: state.backIdBytes!,
         selfiePhotoBytes: state.selfieImage!.bytes,
+        manualNationalId: manualNationalId,
       );
       emit(
         state.copyWith(
@@ -363,6 +365,15 @@ class RegisterCubit extends Cubit<RegisterState> {
         ),
       );
     } on ApiException catch (error) {
+      if (error.message.startsWith('REQUIRES_MANUAL_ID')) {
+        emit(
+          state.copyWith(
+            submissionStatus: RegisterSubmissionStatus.requiresManualId,
+            errorMessage: error.message,
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           submissionStatus: RegisterSubmissionStatus.failure,

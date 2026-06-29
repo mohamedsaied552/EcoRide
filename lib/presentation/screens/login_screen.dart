@@ -46,7 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
     if (session == null) return;
 
     await Navigator.push<void>(
-      // ignore: use_build_context_synchronously
       context,
       MaterialPageRoute(
         builder: (_) => VerifyOtpScreen(

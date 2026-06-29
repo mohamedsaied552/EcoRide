@@ -1190,6 +1190,30 @@ abstract class AppLocalizations {
   /// **'Please capture a selfie to continue.'**
   String get selfieRequired;
 
+  /// No description provided for @manualNationalIdTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter National ID Number'**
+  String get manualNationalIdTitle;
+
+  /// No description provided for @manualNationalIdSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t read your ID automatically. Please type your 14-digit National ID number.'**
+  String get manualNationalIdSubtitle;
+
+  /// No description provided for @manualNationalIdHint.
+  ///
+  /// In en, this message translates to:
+  /// **'14-digit National ID'**
+  String get manualNationalIdHint;
+
+  /// No description provided for @manualNationalIdInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid 14-digit number.'**
+  String get manualNationalIdInvalid;
+
   /// No description provided for @selfieCaptureError.
   ///
   /// In en, this message translates to:

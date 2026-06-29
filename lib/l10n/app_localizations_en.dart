@@ -602,6 +602,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selfieRequired => 'Please capture a selfie to continue.';
 
   @override
+  String get manualNationalIdTitle => 'Enter National ID Number';
+
+  @override
+  String get manualNationalIdSubtitle =>
+      'We couldn\'t read your ID automatically. Please type your 14-digit National ID number.';
+
+  @override
+  String get manualNationalIdHint => '14-digit National ID';
+
+  @override
+  String get manualNationalIdInvalid => 'Enter a valid 14-digit number.';
+
+  @override
   String get selfieCaptureError =>
       'Failed to capture selfie. Please try again.';
 

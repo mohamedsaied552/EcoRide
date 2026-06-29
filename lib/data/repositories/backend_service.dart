@@ -64,6 +64,7 @@ class BackendService {
     required Uint8List idFrontPhotoBytes,
     required Uint8List idBackPhotoBytes,
     required Uint8List selfiePhotoBytes,
+    String? manualNationalId,
   }) async {
     final user = await _authService.register(
       fullName: fullName,
@@ -73,6 +74,7 @@ class BackendService {
       idFrontPhotoBytes: idFrontPhotoBytes,
       idBackPhotoBytes: idBackPhotoBytes,
       selfiePhotoBytes: selfiePhotoBytes,
+      manualNationalId: manualNationalId,
     );
     _currentUser = user;
     return user;

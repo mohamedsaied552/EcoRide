@@ -214,6 +214,12 @@ class AppUser {
     };
   }
 
-  // ignore: strict_top_level_inference
-  static empty() {}
-}
+factory AppUser.empty() => const AppUser(
+      id: '',
+      name: '',
+      email: '',
+      phone: '',
+      walletBalance: 0,
+      ridesCount: 0,
+      rating: 0,
+    );}

@@ -2,11 +2,11 @@ class AppConstants {
   const AppConstants._();
 
   static const String baseUrl =
-      'https://releasable-unrecessive-adam.ngrok-free.dev/api';
+      'https://jhfgw7td-5001.uks1.devtunnels.ms/api';
 
   // Base without /api, used for SignalR hubs
   static const String hubBaseUrl =
-      'https://releasable-unrecessive-adam.ngrok-free.dev';
+      'https://jhfgw7td-5001.uks1.devtunnels.ms';
 
   static const String bearerPrefix = 'Bearer';
   static const String accessTokenKey = 'access_token';

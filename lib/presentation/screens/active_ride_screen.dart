@@ -339,7 +339,6 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
     });
 
     try {
-      // ignore: use_build_context_synchronously
       final ride = await context.read<RideCubit>().endActiveRide(
         endPhotoBytes: photoBytes,
       );

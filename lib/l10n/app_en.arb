@@ -207,6 +207,10 @@
   "confirm": "Confirm",
   "captureSelfie": "Capture Selfie",
   "selfieRequired": "Please capture a selfie to continue.",
+  "manualNationalIdTitle": "Enter National ID Number",
+  "manualNationalIdSubtitle": "We couldn't read your ID automatically. Please type your 14-digit National ID number.",
+  "manualNationalIdHint": "14-digit National ID",
+  "manualNationalIdInvalid": "Enter a valid 14-digit number.",
   "selfieCaptureError": "Failed to capture selfie. Please try again.",
 
   "verifyEmail": "Verify your email",

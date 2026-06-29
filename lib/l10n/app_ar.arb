@@ -195,6 +195,10 @@
   "confirm": "تأكيد",
   "captureSelfie": "التقاط سيلفي",
   "selfieRequired": "يرجى التقاط سيلفي للمتابعة.",
+  "manualNationalIdTitle": "أدخل الرقم القومي",
+  "manualNationalIdSubtitle": "لم نتمكن من قراءة البطاقة تلقائيًا. من فضلك اكتب الرقم القومي المكوّن من 14 رقم.",
+  "manualNationalIdHint": "الرقم القومي (14 رقم)",
+  "manualNationalIdInvalid": "أدخل رقمًا صحيحًا من 14 خانة.",
   "selfieCaptureError": "فشل التقاط السيلفي. يرجى المحاولة مرة أخرى.",
 
   "verifyEmail": "تحقق من بريدك",

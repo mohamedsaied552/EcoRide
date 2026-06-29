@@ -42,6 +42,7 @@ class AuthService {
     required Uint8List idBackPhotoBytes,
     required Uint8List selfiePhotoBytes,
     String email = '',
+    String? manualNationalId,
   }) async {
     final formData = FormData.fromMap(<String, dynamic>{
       'FullName': fullName,
@@ -49,6 +50,8 @@ class AuthService {
       'PhoneNumber': phoneNumber,
       'Password': password,
       'FirebaseToken': firebaseToken,
+      if (manualNationalId != null && manualNationalId.trim().isNotEmpty)
+        'ManualNationalId': manualNationalId.trim(),
       'IdFrontPhoto': MultipartFile.fromBytes(
         idFrontPhotoBytes,
         filename: 'id_front.jpg',

@@ -84,6 +84,11 @@ void handleRegisterSubmission(
     return;
   }
 
+  if (state.submissionStatus == RegisterSubmissionStatus.requiresManualId) {
+    _showManualNationalIdDialog(context, cubit);
+    return;
+  }
+
   if (state.submissionStatus == RegisterSubmissionStatus.failure &&
       state.errorMessage != null) {
     final phoneError = localizePhoneValidationError(l10n, state.errorMessage);
@@ -100,4 +105,62 @@ void handleRegisterSubmission(
       ),
     );
   }
+}
+
+void _showManualNationalIdDialog(BuildContext context, RegisterCubit cubit) {
+  final l10n = AppLocalizations.of(context);
+  final controller = TextEditingController();
+  String? localError;
+
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (dialogContext, setState) {
+          return AlertDialog(
+            title: Text(l10n.manualNationalIdTitle),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.manualNationalIdSubtitle),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  maxLength: 14,
+                  decoration: InputDecoration(
+                    hintText: l10n.manualNationalIdHint,
+                    errorText: localError,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.cancel),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final value = controller.text.trim();
+                  if (value.length != 14 ||
+                      int.tryParse(value) == null) {
+                    setState(() {
+                      localError = l10n.manualNationalIdInvalid;
+                    });
+                    return;
+                  }
+                  Navigator.of(dialogContext).pop();
+                  cubit.submitRegistration(manualNationalId: value);
+                },
+                child: Text(l10n.confirm),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
 }
