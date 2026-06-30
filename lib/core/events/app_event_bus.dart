@@ -23,6 +23,10 @@ class MapRefreshRequestedEvent extends AppEvent {
 class UserLoggedOutEvent extends AppEvent {
   const UserLoggedOutEvent();
 }
+
+class SessionExpiredEvent extends AppEvent {
+  const SessionExpiredEvent();
+}
 class WalletRefreshRequestedEvent extends AppEvent {
   const WalletRefreshRequestedEvent();
 }

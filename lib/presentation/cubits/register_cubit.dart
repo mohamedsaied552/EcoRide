@@ -1,4 +1,3 @@
-
 import 'dart:typed_data';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -86,8 +85,7 @@ class RegisterState {
 
   bool get hasBothIdImages => hasFrontId && hasBackId;
 
-  bool get hasSelfie =>
-      selfieImage != null && selfieImage!.bytes.isNotEmpty;
+  bool get hasSelfie => selfieImage != null && selfieImage!.bytes.isNotEmpty;
 
   bool get isPhoneVerified => firebaseToken.isNotEmpty;
 
@@ -134,8 +132,9 @@ class RegisterState {
           ? null
           : (errorMessage ?? this.errorMessage),
       imageError: clearImageError ? null : (imageError ?? this.imageError),
-      registeredUser:
-          clearRegisteredUser ? null : (registeredUser ?? this.registeredUser),
+      registeredUser: clearRegisteredUser
+          ? null
+          : (registeredUser ?? this.registeredUser),
     );
   }
 }
@@ -271,9 +270,7 @@ class RegisterCubit extends Cubit<RegisterState> {
     try {
       final image = await _imagePickerService.pickIdImage(source);
       if (image == null) {
-        emit(
-          state.copyWith(imageError: RegisterImageError.noImageSelected),
-        );
+        emit(state.copyWith(imageError: RegisterImageError.noImageSelected));
         return;
       }
 
@@ -365,7 +362,7 @@ class RegisterCubit extends Cubit<RegisterState> {
         ),
       );
     } on ApiException catch (error) {
-      if (error.message.startsWith('REQUIRES_MANUAL_ID')) {
+      if (error.message.contains('REQUIRES_MANUAL_ID')) {
         emit(
           state.copyWith(
             submissionStatus: RegisterSubmissionStatus.requiresManualId,

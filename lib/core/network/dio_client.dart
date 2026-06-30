@@ -79,7 +79,7 @@ class DioClient {
     try {
       return await _dio.get(path, queryParameters: queryParameters);
     } on DioException catch (error) {
-      throw _toApiException(error);
+      throw toApiException(error);
     }
   }
 
@@ -97,7 +97,7 @@ class DioClient {
         options: options,
       );
     } on DioException catch (error) {
-      throw _toApiException(error);
+      throw toApiException(error);
     }
   }
 
@@ -115,7 +115,7 @@ class DioClient {
         options: options,
       );
     } on DioException catch (error) {
-      throw _toApiException(error);
+      throw toApiException(error);
     }
   }
 
@@ -131,7 +131,7 @@ class DioClient {
         queryParameters: queryParameters,
       );
     } on DioException catch (error) {
-      throw _toApiException(error);
+      throw toApiException(error);
     }
   }
 
@@ -215,19 +215,21 @@ class DioClient {
     return data;
   }
 
-  ApiException _toApiException(DioException error) {
+  ApiException toApiException(DioException error) {
     final statusCode = error.response?.statusCode;
     final responseData = error.response?.data;
 
     String message = 'Something went wrong. Please try again.';
 
-    if (responseData is Map<String, dynamic>) {
+    if (responseData is Map) {
       final candidates = <dynamic>[
+        responseData['errorMessage'],
         responseData['message'],
         responseData['title'],
         responseData['error'],
         responseData['detail'],
-        _extractValidationErrors(responseData),
+        if (responseData is Map<String, dynamic>)
+          _extractValidationErrors(responseData),
       ];
       for (final value in candidates) {
         if (value is String && value.trim().isNotEmpty) {

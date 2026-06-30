@@ -35,10 +35,7 @@ String localizePhoneValidationError(AppLocalizations l10n, String? code) {
   }
 }
 
-void handleRegisterSubmission(
-  BuildContext context,
-  RegisterState state,
-) {
+void handleRegisterSubmission(BuildContext context, RegisterState state) {
   final l10n = AppLocalizations.of(context);
   final cubit = context.read<RegisterCubit>();
 
@@ -89,11 +86,12 @@ void handleRegisterSubmission(
     return;
   }
 
-  if (state.submissionStatus == RegisterSubmissionStatus.failure &&
-      state.errorMessage != null) {
-    final phoneError = localizePhoneValidationError(l10n, state.errorMessage);
-    final errorCode = FirebaseAuthErrorCode.values.asNameMap()[
-      state.errorMessage!];
+  if (state.submissionStatus == RegisterSubmissionStatus.failure) {
+    final String displayMessage =
+        state.errorMessage ?? 'An unknown error occurred';
+    final phoneError = localizePhoneValidationError(l10n, displayMessage);
+    final errorCode = FirebaseAuthErrorCode.values.asNameMap()[displayMessage];
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -145,8 +143,7 @@ void _showManualNationalIdDialog(BuildContext context, RegisterCubit cubit) {
               ElevatedButton(
                 onPressed: () {
                   final value = controller.text.trim();
-                  if (value.length != 14 ||
-                      int.tryParse(value) == null) {
+                  if (value.length != 14 || int.tryParse(value) == null) {
                     setState(() {
                       localError = l10n.manualNationalIdInvalid;
                     });

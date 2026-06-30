@@ -63,14 +63,18 @@ class ApiService {
     required FormData data,
     Map<String, dynamic>? queryParameters,
   }) async {
-    // 💡 بنستخدم الـ dio الأصلي مباشرة من الـ client بعد ما فتحنا الـ Getter
-    final response = await _dioClient.dio.post(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-      // ⚠️ شيلنا الـ Options تماماً وسيبنا الـ Interceptor والـ FormData يتفاهموا نيتف!
-    );
-    return _asJsonObject(response, path);
+    try {
+      // 💡 بنستخدم الـ dio الأصلي مباشرة من الـ client بعد ما فتحنا الـ Getter
+      final response = await _dioClient.dio.post(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        // ⚠️ شيلنا الـ Options تماماً وسيبنا الـ Interceptor والـ FormData يتفاهموا نيتف!
+      );
+      return _asJsonObject(response, path);
+    } on DioException catch (e) {
+      throw _dioClient.toApiException(e);
+    }
   }
 
   Future<Map<String, dynamic>> multipartPut(

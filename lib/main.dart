@@ -13,8 +13,8 @@ import 'package:glider/presentation/cubits/ride_cubit.dart';
 import 'package:glider/presentation/cubits/user_cubit.dart';
 import 'package:glider/presentation/cubits/wallet_cubit.dart';
 import 'package:glider/core/events/app_event_bus.dart';
-import 'package:glider/core/notifications/notification_manager.dart';
 import 'package:glider/presentation/screens/login_screen.dart';
+import 'package:glider/core/notifications/notification_manager.dart';
 import 'package:glider/presentation/screens/map_screen.dart';
 import 'package:glider/presentation/screens/onboarding_screen.dart';
 import 'package:glider/presentation/screens/profile_screen.dart';
@@ -44,8 +44,14 @@ void main() async {
   GetIt.I.registerSingleton<NotificationManager>(notificationManager);
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  unawaited(notificationManager.initialize());
+unawaited(notificationManager.initialize());
 
+  appEventBus.on<SessionExpiredEvent>().listen((_) {
+    rootNavigatorKey.currentState?.pushNamedAndRemoveUntil(
+      '/login',
+      (_) => false,
+    );
+  });
   runApp(
     MultiBlocProvider(
       providers: [

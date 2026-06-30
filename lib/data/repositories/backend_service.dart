@@ -1,4 +1,3 @@
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:glider/core/constants/app_constants.dart';
@@ -294,7 +293,7 @@ class BackendService {
     }
   }
 
- Future<Ride> endActiveRide({
+  Future<Ride> endActiveRide({
     required double userLatitude,
     required double userLongitude,
     Uint8List? endPhotoBytes,
@@ -348,6 +347,7 @@ class BackendService {
     _currentUser = await fetchCurrentUser(forceRefresh: true);
     return ride;
   }
+
   Future<AppUser> topUpWallet(double amount) async {
     _currentUser ??= await fetchCurrentUser();
 
