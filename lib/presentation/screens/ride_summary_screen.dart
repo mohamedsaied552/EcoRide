@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'package:glider/domain/entities/ride.dart';
-import 'package:glider/l10n/app_localizations.dart';
+import 'package:zakzouka/domain/entities/ride.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
 
 class RideSummaryScreen extends StatelessWidget {
   const RideSummaryScreen({
@@ -78,7 +78,7 @@ class RideSummaryScreen extends StatelessWidget {
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.glider',
+                      userAgentPackageName: 'com.example.zakzouka',
                     ),
                     // يرسم خط السير فقط لو معانا نقطتين أو أكتر
                     if (routePoints.length > 1)

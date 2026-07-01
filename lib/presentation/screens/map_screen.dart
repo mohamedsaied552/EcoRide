@@ -11,15 +11,15 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
 
-import 'package:glider/core/events/app_event_bus.dart';
+import 'package:zakzouka/core/events/app_event_bus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:glider/presentation/cubits/map_cubit.dart';
-import 'package:glider/presentation/cubits/ride_cubit.dart';
-import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/domain/entities/scooter.dart';
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/widgets/app_user_drawer.dart';
-import 'package:glider/presentation/widgets/loading_spinner.dart';
+import 'package:zakzouka/presentation/cubits/map_cubit.dart';
+import 'package:zakzouka/presentation/cubits/ride_cubit.dart';
+import 'package:zakzouka/presentation/cubits/user_cubit.dart';
+import 'package:zakzouka/domain/entities/scooter.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/widgets/app_user_drawer.dart';
+import 'package:zakzouka/presentation/widgets/loading_spinner.dart';
 
 import 'qr_scan_screen.dart';
 import 'wallet_screen.dart';
@@ -406,7 +406,7 @@ class _MapScreenState extends State<MapScreen> {
                   TileLayer(
                     urlTemplate:
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.glider',
+                    userAgentPackageName: 'com.example.zakzouka',
                   ),
                   if (zonePolygons.isNotEmpty)
                     PolygonLayer(polygons: zonePolygons),

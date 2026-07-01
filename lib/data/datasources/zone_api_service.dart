@@ -1,6 +1,6 @@
-import 'package:glider/data/datasources/api_service.dart';
-import 'package:glider/domain/entities/paginated_result.dart';
-import 'package:glider/domain/entities/zone.dart';
+import 'package:zakzouka/data/datasources/api_service.dart';
+import 'package:zakzouka/domain/entities/paginated_result.dart';
+import 'package:zakzouka/domain/entities/zone.dart';
 
 /// Data source for the `/api/Zone` endpoints described in `v1.json`.
 class ZoneApiService {

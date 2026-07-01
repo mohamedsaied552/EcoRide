@@ -2,7 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:glider/core/utils/image_processing.dart';
+import 'package:zakzouka/core/utils/image_processing.dart';
 
 enum IdSide { front, back }
 

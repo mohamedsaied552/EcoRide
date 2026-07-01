@@ -1,4 +1,4 @@
-import 'package:glider/data/datasources/auth_service.dart';
+import 'package:zakzouka/data/datasources/auth_service.dart';
 
 class NotificationService {
   NotificationService({AuthService? authService})

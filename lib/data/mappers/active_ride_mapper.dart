@@ -1,4 +1,4 @@
-import 'package:glider/domain/entities/ride.dart';
+import 'package:zakzouka/domain/entities/ride.dart';
 
 /// Mapper for ActiveRideResponseDto -> `Ride` domain entity.
 Ride mapActiveRideDtoToRide(Map<String, dynamic> dto) {

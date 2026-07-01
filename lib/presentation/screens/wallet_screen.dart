@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/topup_cubit.dart';
-import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/presentation/cubits/wallet_cubit.dart';
-import 'package:glider/presentation/widgets/loading_spinner.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/topup_cubit.dart';
+import 'package:zakzouka/presentation/cubits/user_cubit.dart';
+import 'package:zakzouka/presentation/cubits/wallet_cubit.dart';
+import 'package:zakzouka/presentation/widgets/loading_spinner.dart';
 import 'topup_screen.dart';
 
 class WalletScreen extends StatelessWidget {

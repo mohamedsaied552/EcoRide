@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:glider/core/events/app_event_bus.dart';
+import 'package:zakzouka/core/events/app_event_bus.dart';
 
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/data/services/ride_hub_service.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
+import 'package:zakzouka/data/services/ride_hub_service.dart';
 
 class WalletState {
   const WalletState({required this.balance, this.isLoading = false});

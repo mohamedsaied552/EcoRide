@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
 import '../constants/app_constants.dart';
-import 'package:glider/core/errors/api_exception.dart';
-import 'package:glider/core/storage/token_storage.dart';
+import 'package:zakzouka/core/errors/api_exception.dart';
+import 'package:zakzouka/core/storage/token_storage.dart';
 
 class DioClient {
   DioClient({TokenStorage? tokenStorage})

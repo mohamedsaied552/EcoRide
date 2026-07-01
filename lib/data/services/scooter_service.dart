@@ -1,7 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import 'package:glider/domain/entities/scooter.dart';
-import 'package:glider/data/repositories/backend_service.dart';
+import 'package:zakzouka/domain/entities/scooter.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
 import 'iot_service.dart';
 
 enum ScooterStatus {

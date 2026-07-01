@@ -3,16 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:glider/data/services/ride_hub_service.dart';
+import 'package:zakzouka/data/services/ride_hub_service.dart';
 
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/presentation/cubits/verify_otp_cubit.dart';
-import 'package:glider/presentation/cubits/wallet_cubit.dart';
-import 'package:glider/core/notifications/notification_manager.dart';
-import 'package:glider/data/datasources/firebase_auth_service.dart';
-import 'package:glider/presentation/utils/firebase_auth_error_utils.dart';
-import 'package:glider/presentation/screens/reset_password_screen.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/user_cubit.dart';
+import 'package:zakzouka/presentation/cubits/verify_otp_cubit.dart';
+import 'package:zakzouka/presentation/cubits/wallet_cubit.dart';
+import 'package:zakzouka/core/notifications/notification_manager.dart';
+import 'package:zakzouka/data/datasources/firebase_auth_service.dart';
+import 'package:zakzouka/presentation/utils/firebase_auth_error_utils.dart';
+import 'package:zakzouka/presentation/screens/reset_password_screen.dart';
 import 'map_screen.dart';
 
 String localizeVerifyOtpError(
@@ -137,6 +137,7 @@ class _VerifyOtpView extends StatelessWidget {
               debugPrint('SignalR connect failed: $e');
             }
             unawaited(
+              // ignore: use_build_context_synchronously
               context.read<WalletCubit>().initialize(
                 initialBalance: user.walletBalance,
               ),
@@ -151,7 +152,9 @@ class _VerifyOtpView extends StatelessWidget {
             unawaited(GetIt.I<NotificationManager>().syncTokenWithServer());
             await RideHubService().connect(); // ← ADD THIS
             debugPrint('SIGNALR CONNECT START → done'); // ← temporary debug log
+            // ignore: use_build_context_synchronously
             unawaited(context.read<WalletCubit>().initialize());
+            // ignore: use_build_context_synchronously
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const MapScreen()),
               (route) => false,

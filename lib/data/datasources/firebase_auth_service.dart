@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:glider/domain/entities/user.dart';
+import 'package:zakzouka/domain/entities/user.dart';
 
 enum FirebaseAuthErrorCode {
   weakPassword,

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/ride_cubit.dart';
-import 'package:glider/presentation/cubits/topup_cubit.dart';
-import 'package:glider/presentation/screens/active_ride_screen.dart';
-import 'package:glider/presentation/screens/topup_screen.dart';
-import 'package:glider/presentation/widgets/qr_view.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/ride_cubit.dart';
+import 'package:zakzouka/presentation/cubits/topup_cubit.dart';
+import 'package:zakzouka/presentation/screens/active_ride_screen.dart';
+import 'package:zakzouka/presentation/screens/topup_screen.dart';
+import 'package:zakzouka/presentation/widgets/qr_view.dart';
 
 String _localizeScooterStatus(AppLocalizations l10n, String statusLabel) {
   switch (statusLabel) {

@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/data/repositories/wallet_repository_impl.dart';
-import 'package:glider/domain/usecases/initiate_top_up_use_case.dart';
+import 'package:zakzouka/data/repositories/wallet_repository_impl.dart';
+import 'package:zakzouka/domain/usecases/initiate_top_up_use_case.dart';
 
 enum TopUpStatus { idle, loading, success, failure }
 

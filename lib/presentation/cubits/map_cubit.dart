@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/domain/entities/map_zone.dart';
-import 'package:glider/domain/entities/scooter.dart';
+import 'package:zakzouka/domain/entities/map_zone.dart';
+import 'package:zakzouka/domain/entities/scooter.dart';
 import '../../data/repositories/backend_service.dart';
 
 enum MapStatus { initial, loading, success, failure }

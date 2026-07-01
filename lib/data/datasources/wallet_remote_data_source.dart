@@ -1,4 +1,4 @@
-import 'package:glider/data/datasources/api_service.dart';
+import 'package:zakzouka/data/datasources/api_service.dart';
 
 abstract class WalletRemoteDataSource {
   Future<String> initiateTopUp({

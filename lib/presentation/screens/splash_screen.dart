@@ -1,12 +1,12 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:glider/data/services/ride_hub_service.dart';
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/ride_cubit.dart';
-import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/presentation/cubits/wallet_cubit.dart';
-import 'package:glider/presentation/screens/active_ride_screen.dart';
+import 'package:zakzouka/data/services/ride_hub_service.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/ride_cubit.dart';
+import 'package:zakzouka/presentation/cubits/user_cubit.dart';
+import 'package:zakzouka/presentation/cubits/wallet_cubit.dart';
+import 'package:zakzouka/presentation/screens/active_ride_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {

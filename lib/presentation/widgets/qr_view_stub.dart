@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:glider/l10n/app_localizations.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
 import 'qr_view_types.dart';
 
 class QrViewImpl extends StatelessWidget {

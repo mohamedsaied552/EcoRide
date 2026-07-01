@@ -2,9 +2,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:signalr_netcore/signalr_client.dart';
-import 'package:glider/core/constants/app_constants.dart';
-import 'package:glider/core/storage/token_storage.dart';
-import 'package:glider/domain/entities/live_ride_update.dart';
+import 'package:zakzouka/core/constants/app_constants.dart';
+import 'package:zakzouka/core/storage/token_storage.dart';
+import 'package:zakzouka/domain/entities/live_ride_update.dart';
 
 class RideHubService {
   RideHubService._internal({TokenStorage? tokenStorage})

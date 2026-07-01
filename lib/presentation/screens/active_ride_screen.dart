@@ -9,14 +9,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/data/services/ride_service.dart';
-import 'package:glider/domain/entities/map_zone.dart';
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/ride_cubit.dart';
-import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/presentation/cubits/wallet_cubit.dart';
-import 'package:glider/presentation/screens/ride_summary_screen.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
+import 'package:zakzouka/data/services/ride_service.dart';
+import 'package:zakzouka/domain/entities/map_zone.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/ride_cubit.dart';
+import 'package:zakzouka/presentation/cubits/user_cubit.dart';
+import 'package:zakzouka/presentation/cubits/wallet_cubit.dart';
+import 'package:zakzouka/presentation/screens/ride_summary_screen.dart';
 
 class ActiveRideScreen extends StatefulWidget {
   const ActiveRideScreen({
@@ -339,6 +339,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
     });
 
     try {
+      // ignore: use_build_context_synchronously
       final ride = await context.read<RideCubit>().endActiveRide(
         endPhotoBytes: photoBytes,
       );
@@ -457,7 +458,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.glider',
+                  userAgentPackageName: 'com.example.zakzouka',
                 ),
                 if (zonePolygons.isNotEmpty)
                   PolygonLayer(polygons: zonePolygons),

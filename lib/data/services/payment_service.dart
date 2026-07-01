@@ -1,4 +1,4 @@
-import 'package:glider/data/repositories/backend_service.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
 
 class PaymentService {
   /// Simulates a successful payment, then updates the demo wallet balance.

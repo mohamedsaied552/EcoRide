@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import 'package:glider/config/app_config.dart';
-import 'package:glider/core/location/location_accuracy_validator.dart';
-import 'package:glider/data/services/ride_service.dart';
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/widgets/map_unavailable_card.dart';
+import 'package:zakzouka/config/app_config.dart';
+import 'package:zakzouka/core/location/location_accuracy_validator.dart';
+import 'package:zakzouka/data/services/ride_service.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/widgets/map_unavailable_card.dart';
 
 class RideScreen extends StatefulWidget {
   const RideScreen({super.key});

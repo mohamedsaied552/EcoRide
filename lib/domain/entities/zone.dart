@@ -1,4 +1,4 @@
-import 'package:glider/domain/entities/map_zone.dart';
+import 'package:zakzouka/domain/entities/map_zone.dart';
 
 /// Full Zone entity that mirrors `ZoneDto` from the OpenAPI spec.
 ///

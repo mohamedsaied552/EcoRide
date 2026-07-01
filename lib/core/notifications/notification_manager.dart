@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:glider/core/events/app_event_bus.dart';
-import 'package:glider/core/notifications/local_notification_service.dart';
-import 'package:glider/core/storage/fcm_token_storage.dart';
-import 'package:glider/core/storage/token_storage.dart';
-import 'package:glider/data/services/notification_service.dart';
+import 'package:zakzouka/core/events/app_event_bus.dart';
+import 'package:zakzouka/core/notifications/local_notification_service.dart';
+import 'package:zakzouka/core/storage/fcm_token_storage.dart';
+import 'package:zakzouka/core/storage/token_storage.dart';
+import 'package:zakzouka/data/services/notification_service.dart';
 
 class NotificationManager {
   NotificationManager({

@@ -1,5 +1,5 @@
-import 'package:glider/data/datasources/firebase_auth_service.dart';
-import 'package:glider/l10n/app_localizations.dart';
+import 'package:zakzouka/data/datasources/firebase_auth_service.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
 
 String localizeFirebaseAuthError(
   AppLocalizations l10n,

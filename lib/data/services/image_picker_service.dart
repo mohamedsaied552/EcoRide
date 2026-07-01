@@ -1,6 +1,6 @@
 import 'package:image_picker/image_picker.dart';
 
-import 'package:glider/domain/entities/picked_image_data.dart';
+import 'package:zakzouka/domain/entities/picked_image_data.dart';
 
 class ImagePickerService {
   ImagePickerService({ImagePicker? picker}) : _picker = picker ?? ImagePicker();

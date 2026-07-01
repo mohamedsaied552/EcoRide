@@ -1,6 +1,6 @@
 ﻿import 'package:flutter_test/flutter_test.dart';
 
-import 'package:glider/main.dart';
+import 'package:zakzouka/main.dart';
 
 void main() {
   testWidgets('Splash shows app title', (WidgetTester tester) async {

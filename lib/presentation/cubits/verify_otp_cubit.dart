@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/core/errors/api_exception.dart';
-import 'package:glider/data/datasources/firebase_auth_service.dart';
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/domain/entities/user.dart';
+import 'package:zakzouka/core/errors/api_exception.dart';
+import 'package:zakzouka/data/datasources/firebase_auth_service.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
+import 'package:zakzouka/domain/entities/user.dart';
 
 enum VerifyOtpFlow { registration, login, forgotPassword }
 

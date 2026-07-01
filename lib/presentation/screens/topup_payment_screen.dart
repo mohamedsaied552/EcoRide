@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:glider/core/constants/app_constants.dart';
-import 'package:glider/l10n/app_localizations.dart';
+import 'package:zakzouka/core/constants/app_constants.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
 
 class TopUpPaymentScreen extends StatefulWidget {
   const TopUpPaymentScreen({super.key, required this.redirectUrl});

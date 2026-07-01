@@ -4,13 +4,13 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/register_cubit.dart';
-import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/presentation/cubits/wallet_cubit.dart';
-import 'package:glider/presentation/utils/register_flow_utils.dart';
-import 'package:glider/presentation/screens/map_screen.dart';
-import 'package:glider/presentation/screens/selfie_camera_capture_screen.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/register_cubit.dart';
+import 'package:zakzouka/presentation/cubits/user_cubit.dart';
+import 'package:zakzouka/presentation/cubits/wallet_cubit.dart';
+import 'package:zakzouka/presentation/utils/register_flow_utils.dart';
+import 'package:zakzouka/presentation/screens/map_screen.dart';
+import 'package:zakzouka/presentation/screens/selfie_camera_capture_screen.dart';
 
 class SelfieVerificationScreen extends StatefulWidget {
   const SelfieVerificationScreen({super.key});

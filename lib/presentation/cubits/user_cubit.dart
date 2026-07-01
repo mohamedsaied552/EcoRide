@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
-import 'package:glider/core/notifications/notification_manager.dart';
-import 'package:glider/data/datasources/firebase_auth_service.dart';
-import 'package:glider/domain/entities/user.dart';
+import 'package:zakzouka/core/notifications/notification_manager.dart';
+import 'package:zakzouka/data/datasources/firebase_auth_service.dart';
+import 'package:zakzouka/domain/entities/user.dart';
 import '../../data/repositories/backend_service.dart';
 
 enum UserStatus { initial, loading, authenticated, unauthenticated, failure }

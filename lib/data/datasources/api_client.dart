@@ -1,4 +1,4 @@
-import 'package:glider/data/repositories/backend_service.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
 
 /// Minimal API client abstraction for data sources to allow easy mocking
 /// in tests without depending on BackendService's concrete implementation.

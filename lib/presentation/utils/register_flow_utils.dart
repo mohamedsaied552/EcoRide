@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/data/datasources/firebase_auth_service.dart';
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/register_cubit.dart';
-import 'package:glider/presentation/cubits/verify_otp_cubit.dart';
-import 'package:glider/presentation/screens/register_documents_screen.dart';
-import 'package:glider/presentation/screens/verify_otp_screen.dart';
-import 'package:glider/presentation/utils/firebase_auth_error_utils.dart';
+import 'package:zakzouka/data/datasources/firebase_auth_service.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/register_cubit.dart';
+import 'package:zakzouka/presentation/cubits/verify_otp_cubit.dart';
+import 'package:zakzouka/presentation/screens/register_documents_screen.dart';
+import 'package:zakzouka/presentation/screens/verify_otp_screen.dart';
+import 'package:zakzouka/presentation/utils/firebase_auth_error_utils.dart';
 
 String localizeRegisterImageError(AppLocalizations l10n, String? error) {
   switch (error) {

@@ -1,5 +1,5 @@
-import 'package:glider/domain/entities/map_zone.dart';
-import 'package:glider/domain/entities/scooter.dart';
+import 'package:zakzouka/domain/entities/map_zone.dart';
+import 'package:zakzouka/domain/entities/scooter.dart';
 
 class LiveMapBundle {
   const LiveMapBundle({required this.scooters, required this.zones});

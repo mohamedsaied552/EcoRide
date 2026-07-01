@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/locale_cubit.dart';
-import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/domain/entities/user.dart';
-import 'package:glider/presentation/screens/help_center_screen.dart';
-import 'package:glider/presentation/screens/login_screen.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/locale_cubit.dart';
+import 'package:zakzouka/presentation/cubits/user_cubit.dart';
+import 'package:zakzouka/domain/entities/user.dart';
+import 'package:zakzouka/presentation/screens/help_center_screen.dart';
+import 'package:zakzouka/presentation/screens/login_screen.dart';
 
 class AppUserDrawer extends StatelessWidget {
   const AppUserDrawer({

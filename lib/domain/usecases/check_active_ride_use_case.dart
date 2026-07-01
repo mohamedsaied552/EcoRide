@@ -1,5 +1,5 @@
-import 'package:glider/domain/entities/ride.dart';
-import 'package:glider/domain/repositories/ride_repository.dart';
+import 'package:zakzouka/domain/entities/ride.dart';
+import 'package:zakzouka/domain/repositories/ride_repository.dart';
 
 class CheckActiveRideUseCase {
   CheckActiveRideUseCase(this._rideRepository);

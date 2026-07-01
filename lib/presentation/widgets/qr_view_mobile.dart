@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import 'package:glider/l10n/app_localizations.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
 
 class QrViewMobile extends StatefulWidget {
   const QrViewMobile({super.key});

@@ -3,14 +3,14 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/register_cubit.dart';
-import 'package:glider/presentation/cubits/user_cubit.dart';
-import 'package:glider/presentation/screens/id_camera_capture_screen.dart';
-import 'package:glider/presentation/screens/selfie_verification_screen.dart';
-import 'package:glider/presentation/utils/register_flow_utils.dart';
-import 'package:glider/presentation/widgets/id_upload_card.dart';
-import 'package:glider/presentation/widgets/register_progress_indicator.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/register_cubit.dart';
+import 'package:zakzouka/presentation/cubits/user_cubit.dart';
+import 'package:zakzouka/presentation/screens/id_camera_capture_screen.dart';
+import 'package:zakzouka/presentation/screens/selfie_verification_screen.dart';
+import 'package:zakzouka/presentation/utils/register_flow_utils.dart';
+import 'package:zakzouka/presentation/widgets/id_upload_card.dart';
+import 'package:zakzouka/presentation/widgets/register_progress_indicator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'map_screen.dart';
 

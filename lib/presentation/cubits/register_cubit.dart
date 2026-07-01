@@ -3,13 +3,13 @@ import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:glider/core/errors/api_exception.dart';
-import 'package:glider/data/datasources/firebase_auth_service.dart';
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/domain/entities/picked_image_data.dart';
-import 'package:glider/domain/entities/user.dart';
-import 'package:glider/data/services/image_picker_service.dart';
-import 'package:glider/presentation/utils/phone_utils.dart';
+import 'package:zakzouka/core/errors/api_exception.dart';
+import 'package:zakzouka/data/datasources/firebase_auth_service.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
+import 'package:zakzouka/domain/entities/picked_image_data.dart';
+import 'package:zakzouka/domain/entities/user.dart';
+import 'package:zakzouka/data/services/image_picker_service.dart';
+import 'package:zakzouka/presentation/utils/phone_utils.dart';
 
 enum RegisterSubmissionStatus {
   idle,

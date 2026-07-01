@@ -1,5 +1,5 @@
-import 'package:glider/data/datasources/wallet_remote_data_source.dart';
-import 'package:glider/domain/repositories/wallet_repository.dart';
+import 'package:zakzouka/data/datasources/wallet_remote_data_source.dart';
+import 'package:zakzouka/domain/repositories/wallet_repository.dart';
 
 class WalletRepositoryImpl implements WalletRepository {
   WalletRepositoryImpl({WalletRemoteDataSource? remoteDataSource})

@@ -1,6 +1,6 @@
-import 'package:glider/data/datasources/ride_remote_data_source.dart';
-import 'package:glider/domain/entities/ride.dart';
-import 'package:glider/domain/repositories/ride_repository.dart';
+import 'package:zakzouka/data/datasources/ride_remote_data_source.dart';
+import 'package:zakzouka/domain/entities/ride.dart';
+import 'package:zakzouka/domain/repositories/ride_repository.dart';
 
 class RideRepositoryImpl implements RideRepository {
   RideRepositoryImpl({RideRemoteDataSource? remoteDataSource})

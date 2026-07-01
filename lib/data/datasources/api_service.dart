@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
-import 'package:glider/core/errors/api_exception.dart';
-import 'package:glider/core/network/dio_client.dart';
+import 'package:zakzouka/core/errors/api_exception.dart';
+import 'package:zakzouka/core/network/dio_client.dart';
 
 class ApiService {
   ApiService({DioClient? dioClient}) : _dioClient = dioClient ?? DioClient();

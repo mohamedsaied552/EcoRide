@@ -1,5 +1,5 @@
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/data/datasources/api_client.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
+import 'package:zakzouka/data/datasources/api_client.dart';
 
 abstract class FcmTokenRemoteDataSource {
   Future<void> updateFcmToken({required String userId, required String token});

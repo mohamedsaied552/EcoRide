@@ -1,18 +1,18 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:glider/core/constants/app_constants.dart';
-import 'package:glider/core/errors/api_exception.dart';
-import 'package:glider/domain/entities/live_map_bundle.dart';
-import 'package:glider/domain/entities/paginated_result.dart';
-import 'package:glider/domain/entities/ride.dart';
-import 'package:glider/domain/entities/scooter.dart';
-import 'package:glider/domain/entities/scooter_status_info.dart';
-import 'package:glider/domain/entities/user.dart';
-import 'package:glider/domain/entities/zone.dart';
-import 'package:glider/data/datasources/api_service.dart';
-import 'package:glider/data/datasources/auth_service.dart';
-import 'package:glider/data/datasources/scooter_api_service.dart';
-import 'package:glider/data/datasources/zone_api_service.dart';
+import 'package:zakzouka/core/constants/app_constants.dart';
+import 'package:zakzouka/core/errors/api_exception.dart';
+import 'package:zakzouka/domain/entities/live_map_bundle.dart';
+import 'package:zakzouka/domain/entities/paginated_result.dart';
+import 'package:zakzouka/domain/entities/ride.dart';
+import 'package:zakzouka/domain/entities/scooter.dart';
+import 'package:zakzouka/domain/entities/scooter_status_info.dart';
+import 'package:zakzouka/domain/entities/user.dart';
+import 'package:zakzouka/domain/entities/zone.dart';
+import 'package:zakzouka/data/datasources/api_service.dart';
+import 'package:zakzouka/data/datasources/auth_service.dart';
+import 'package:zakzouka/data/datasources/scooter_api_service.dart';
+import 'package:zakzouka/data/datasources/zone_api_service.dart';
 
 class BackendService {
   BackendService._internal({

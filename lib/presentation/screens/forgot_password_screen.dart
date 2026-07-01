@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import 'package:glider/data/datasources/firebase_auth_service.dart';
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/cubits/verify_otp_cubit.dart';
-import 'package:glider/presentation/screens/verify_otp_screen.dart';
-import 'package:glider/presentation/utils/firebase_auth_error_utils.dart';
-import 'package:glider/presentation/utils/phone_utils.dart';
-import 'package:glider/presentation/utils/register_flow_utils.dart';
-import 'package:glider/presentation/widgets/country_code_picker.dart';
+import 'package:zakzouka/data/datasources/firebase_auth_service.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/cubits/verify_otp_cubit.dart';
+import 'package:zakzouka/presentation/screens/verify_otp_screen.dart';
+import 'package:zakzouka/presentation/utils/firebase_auth_error_utils.dart';
+import 'package:zakzouka/presentation/utils/phone_utils.dart';
+import 'package:zakzouka/presentation/utils/register_flow_utils.dart';
+import 'package:zakzouka/presentation/widgets/country_code_picker.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});

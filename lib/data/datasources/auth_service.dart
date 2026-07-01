@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:glider/core/storage/token_storage.dart';
-import 'package:glider/domain/entities/auth_result.dart';
-import 'package:glider/domain/entities/user.dart';
-import 'package:glider/data/datasources/api_service.dart';
+import 'package:zakzouka/core/storage/token_storage.dart';
+import 'package:zakzouka/domain/entities/auth_result.dart';
+import 'package:zakzouka/domain/entities/user.dart';
+import 'package:zakzouka/data/datasources/api_service.dart';
 
 class AuthService {
   AuthService({ApiService? apiService, TokenStorage? tokenStorage})

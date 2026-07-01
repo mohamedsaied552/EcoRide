@@ -1,8 +1,8 @@
-import 'package:glider/data/datasources/api_service.dart';
-import 'package:glider/domain/entities/live_map_bundle.dart';
-import 'package:glider/domain/entities/paginated_result.dart';
-import 'package:glider/domain/entities/scooter.dart';
-import 'package:glider/domain/entities/scooter_status_info.dart';
+import 'package:zakzouka/data/datasources/api_service.dart';
+import 'package:zakzouka/domain/entities/live_map_bundle.dart';
+import 'package:zakzouka/domain/entities/paginated_result.dart';
+import 'package:zakzouka/domain/entities/scooter.dart';
+import 'package:zakzouka/domain/entities/scooter_status_info.dart';
 
 class ScooterApiService {
   ScooterApiService({ApiService? apiService})

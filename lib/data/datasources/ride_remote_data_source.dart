@@ -1,7 +1,7 @@
-import 'package:glider/domain/entities/ride.dart';
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/data/datasources/api_client.dart';
-import 'package:glider/data/mappers/active_ride_mapper.dart';
+import 'package:zakzouka/domain/entities/ride.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
+import 'package:zakzouka/data/datasources/api_client.dart';
+import 'package:zakzouka/data/mappers/active_ride_mapper.dart';
 
 /// Data source that uses the project's HTTP backend (via BackendService)
 /// to check for an active ride for the current user.

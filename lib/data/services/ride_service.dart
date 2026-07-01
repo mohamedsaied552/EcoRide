@@ -4,15 +4,15 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import 'package:glider/domain/entities/live_ride_update.dart';
-import 'package:glider/domain/entities/ride.dart';
-import 'package:glider/domain/entities/scooter.dart';
-import 'package:glider/domain/entities/user.dart';
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/data/services/ride_hub_service.dart';
+import 'package:zakzouka/domain/entities/live_ride_update.dart';
+import 'package:zakzouka/domain/entities/ride.dart';
+import 'package:zakzouka/domain/entities/scooter.dart';
+import 'package:zakzouka/domain/entities/user.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
+import 'package:zakzouka/data/services/ride_hub_service.dart';
 import 'geofence_service.dart';
 import 'iot_service.dart';
-import 'package:glider/data/services/scooter_service.dart';
+import 'package:zakzouka/data/services/scooter_service.dart';
 
 class RideSessionState {
   const RideSessionState({

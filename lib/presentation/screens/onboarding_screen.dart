@@ -1,6 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 
-import 'package:glider/l10n/app_localizations.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
 import 'login_screen.dart';
 
 class OnboardingScreen extends StatelessWidget {

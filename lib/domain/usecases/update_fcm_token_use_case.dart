@@ -1,4 +1,4 @@
-import 'package:glider/domain/repositories/fcm_token_repository.dart';
+import 'package:zakzouka/domain/repositories/fcm_token_repository.dart';
 
 class UpdateFcmTokenUseCase {
   UpdateFcmTokenUseCase(this._repository);

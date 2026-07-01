@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/l10n/app_localizations.dart';
-import 'package:glider/presentation/screens/login_screen.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
+import 'package:zakzouka/l10n/app_localizations.dart';
+import 'package:zakzouka/presentation/screens/login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({

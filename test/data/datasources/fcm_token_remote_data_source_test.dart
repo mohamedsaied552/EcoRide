@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glider/data/datasources/fcm_token_remote_data_source.dart';
-import 'package:glider/data/datasources/api_client.dart';
+import 'package:zakzouka/data/datasources/fcm_token_remote_data_source.dart';
+import 'package:zakzouka/data/datasources/api_client.dart';
 
 class FakeApiClient implements ApiClient {
   String? lastPutPath;

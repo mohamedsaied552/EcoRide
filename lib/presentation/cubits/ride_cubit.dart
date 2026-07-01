@@ -4,14 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 
-import 'package:glider/data/repositories/backend_service.dart';
-import 'package:glider/data/services/ride_service.dart';
-import 'package:glider/domain/entities/ride.dart';
-import 'package:glider/domain/entities/scooter.dart';
-import 'package:glider/domain/entities/user.dart';
-import 'package:glider/core/location/location_accuracy_validator.dart';
-import 'package:glider/data/repositories/ride_repository_impl.dart';
-import 'package:glider/domain/usecases/check_active_ride_use_case.dart';
+import 'package:zakzouka/data/repositories/backend_service.dart';
+import 'package:zakzouka/data/services/ride_service.dart';
+import 'package:zakzouka/domain/entities/ride.dart';
+import 'package:zakzouka/domain/entities/scooter.dart';
+import 'package:zakzouka/domain/entities/user.dart';
+import 'package:zakzouka/core/location/location_accuracy_validator.dart';
+import 'package:zakzouka/data/repositories/ride_repository_impl.dart';
+import 'package:zakzouka/domain/usecases/check_active_ride_use_case.dart';
 
 class RidePreview {
   const RidePreview({
@@ -154,7 +154,7 @@ class RideCubit extends Cubit<RideState> {
       emit(
         const RideFailure(
           message:
-              'Unable to read this QR code. Please scan a Glider scooter QR.',
+              'Unable to read this QR code. Please scan a zakzouka scooter QR.',
         ),
       );
       return;

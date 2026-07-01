@@ -4,9 +4,9 @@ import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:glider/domain/entities/user.dart';
+import 'package:zakzouka/domain/entities/user.dart';
 import '../../data/repositories/backend_service.dart';
-import 'package:glider/data/services/image_picker_service.dart';
+import 'package:zakzouka/data/services/image_picker_service.dart';
 
 enum ProfileStatus {
   initial,
