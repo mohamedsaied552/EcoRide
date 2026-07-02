@@ -1,3 +1,5 @@
+import 'package:zakzouka/core/constants/app_constants.dart';
+
 enum UserRole { user, admin }
 
 class AppUser {
@@ -175,12 +177,11 @@ class AppUser {
 
   static String? _sanitizeAvatarUrl(String? url) {
     if (url == null || url.trim().isEmpty) return null;
-    const ngrokBase = 'https://releasable-unrecessive-adam.ngrok-free.dev';
     final normalized = url.trim();
     if (normalized.contains('localhost:5001')) {
       return normalized.replaceFirst(
         RegExp(r'https?://localhost:5001'),
-        ngrokBase,
+        AppConstants.hubBaseUrl,
       );
     }
     return normalized;
@@ -214,12 +215,13 @@ class AppUser {
     };
   }
 
-factory AppUser.empty() => const AppUser(
-      id: '',
-      name: '',
-      email: '',
-      phone: '',
-      walletBalance: 0,
-      ridesCount: 0,
-      rating: 0,
-    );}
+  factory AppUser.empty() => const AppUser(
+    id: '',
+    name: '',
+    email: '',
+    phone: '',
+    walletBalance: 0,
+    ridesCount: 0,
+    rating: 0,
+  );
+}
